@@ -24,7 +24,7 @@ defmodule DiceTown.Game do
     |> Enum.map( fn(%Player{id: id}) -> id end)
 
     buildings_built = player_ids
-    |> Enum.map( fn(id) -> {id, %{wheat_field: 1, ranch: 1}} end)
+    |> Enum.map( fn(id) -> {id, %{wheat_field: 1, bakery: 1}} end)
     |> Map.new
 
     coins = player_ids
@@ -37,7 +37,7 @@ defmodule DiceTown.Game do
       coins: coins,
       buildings_available: %{
         wheat_field: 8,
-        ranch: 8
+        bakery: 8
       },
       turn: %GameTurn{
         player_id: List.first(player_ids),

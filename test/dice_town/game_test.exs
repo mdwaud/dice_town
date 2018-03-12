@@ -17,11 +17,11 @@ defmodule DiceTown.GameTest do
     buildings_built: %{
       0 => %{
         wheat_field: 1,
-        ranch: 1
+        bakery: 1
       },
       1 => %{
         wheat_field: 1,
-        ranch: 1
+        bakery: 1
       }
     },
     coins: %{
@@ -30,7 +30,7 @@ defmodule DiceTown.GameTest do
     },
     buildings_available: %{
       wheat_field: 8,
-      ranch: 8
+      bakery: 8
     },
     turn: %Game.GameTurn{
       player_id: 0,
