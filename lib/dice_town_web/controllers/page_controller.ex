@@ -5,7 +5,7 @@ defmodule DiceTownWeb.PageController do
 
   def index(conn, _params) do
     # for now, let's just immediately start a one player game
-    player_names = ["Player 1"]
+    player_names = ["Player 1", "Player 2"]
 
     {:ok, pid} = GameServer.start_link(player_names)
     game_state = GameServer.get_state(pid)

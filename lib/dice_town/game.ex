@@ -45,4 +45,16 @@ defmodule DiceTown.Game do
       }
     }
   end
+
+  # only care about one die for now
+  def roll_dice(game_state) do
+    result = Enum.random(1..6)
+
+    new_game_state = %GameState{game_state | turn: %GameTurn{
+      player_id: game_state.turn.player_id,
+      phase: :earn_income
+    }}
+
+    {:die_roll, result, new_game_state}
+  end
 end
