@@ -59,10 +59,13 @@ defmodule DiceTown.Game do
   def earn_income(game_state, die_roll) do
     new_game_state = game_state
     |> wheat_field(die_roll)
+    |> bakery(die_roll)
     |> update_turn(game_state.turn.player_id, :construction)
 
     {:earned_income, [], new_game_state}
   end
+
+  # buildings
 
   def wheat_field(game_state, 1) do
     player_ids = game_state.players
@@ -71,6 +74,11 @@ defmodule DiceTown.Game do
     pay_players(game_state, player_ids, 1)
   end
   def wheat_field(game_state, _), do: game_state
+
+  def bakery(game_state, die_roll) when die_roll in [2,3] do
+    pay_players(game_state, [game_state.turn.player_id], 1)
+  end
+  def bakery(game_state, _), do: game_state
 
   # utility methods
   def pay_players(game_state, [], _), do: game_state

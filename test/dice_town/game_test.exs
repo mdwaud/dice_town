@@ -71,9 +71,20 @@ defmodule DiceTown.GameTest do
       assert :construction == new_game_state.turn.phase
     end
 
-    @tag :skip
     test "rolling a 2 pays roller (bakery)" do
+      game_state = %Game.GameState{@initial_state_two_player | turn: %Game.GameTurn{
+        player_id: 0,
+        phase: :earn_income
+      }}
 
+      {:earned_income, [], new_game_state} = Game.earn_income(game_state, 2)
+
+      # check moneys
+      assert 4 == new_game_state.coins[0]
+      assert 3 == new_game_state.coins[1]
+      # check turn state
+      assert 0 == new_game_state.turn.player_id
+      assert :construction == new_game_state.turn.phase
     end
 
     test "rolling a 4 pays no one" do
