@@ -1,6 +1,8 @@
 <div>
   <h4>Game State</h4>
   <p>
-    <%= inspect @game_state %>
+    <pre>
+      <%= inspect @game_state, pretty: true, limit: 30000 %>
+    </pre>
   </p>
 </div>

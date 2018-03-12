@@ -7,14 +7,13 @@ defmodule DiceTown.GameServer do
     defstruct id: nil, name: nil
   end
 
-  defmodule GameState do
-    defstruct players: [], buildings_built: %{}
+  defmodule GameTurn do
+    defstruct player_id: nil, phase: nil
   end
 
-  @buildings [
-    :wheat_field,
-    :ranch
-  ]
+  defmodule GameState do
+    defstruct players: [], buildings_built: %{}, buildings_available: %{}, coins: %{}, turn: nil
+  end
 
   # client
 
@@ -51,9 +50,22 @@ defmodule DiceTown.GameServer do
     |> Enum.map( fn(id) -> {id, %{wheat_field: 1, ranch: 1}} end)
     |> Map.new
 
-    game_state = %GameState{
+    coins = player_ids
+    |> Enum.map( fn(id) -> {id, 3} end)
+    |> Map.new
+
+    %GameState{
       players: players,
-      buildings_built: buildings_built
+      buildings_built: buildings_built,
+      coins: coins,
+      buildings_available: %{
+        wheat_field: 8,
+        ranch: 8
+      },
+      turn: %GameTurn{
+        player_id: List.first(player_ids),
+        phase: :roll_dice
+      }
     }
   end
 end

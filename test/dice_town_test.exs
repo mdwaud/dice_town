@@ -16,6 +16,17 @@ defmodule DiceTownTest do
           wheat_field: 1,
           ranch: 1
         }
+      },
+      coins: %{
+        0 => 3
+      },
+      buildings_available: %{
+        wheat_field: 8,
+        ranch: 8
+      },
+      turn: %DiceTown.GameServer.GameTurn{
+        player_id: 0,
+        phase: :roll_dice
       }
     }
   end
