@@ -80,5 +80,13 @@ defmodule DiceTown.Game.EarnIncomeTest do
         }
       ]
     end
+
+  end
+
+  describe "apply_building_activations" do
+    @tag :skip
+    test "a cafe against a player with no money should fail" do
+
+    end
   end
 end

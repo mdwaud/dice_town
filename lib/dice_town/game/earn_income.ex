@@ -1,6 +1,7 @@
 defmodule DiceTown.Game.EarnIncome do
   alias DiceTown.Game
   alias DiceTown.Game.BuildingActivation
+  alias DiceTown.Game.EarnIncomeResult
 
   def calc_building_activiations(buildings, current_player_id, die_roll) do
     [:wheat_field, :bakery]
@@ -8,13 +9,22 @@ defmodule DiceTown.Game.EarnIncome do
     |> List.flatten
   end
 
-  def apply_building_activations(game_state, []), do: game_state
-
   def apply_building_activations(game_state, building_activations) do
-    [building_activation | remaining_activations] = building_activations
-    new_game_state = pay_player(game_state, building_activation.to_player_id, building_activation.total_amount)
+    apply_building_activations(game_state, building_activations, [])
+  end
 
-    apply_building_activations(new_game_state, remaining_activations)
+  def apply_building_activations(game_state, [], earn_income_results) do
+    {game_state, earn_income_results}
+  end
+  def apply_building_activations(game_state, building_activations, earn_income_results) do
+    [building_activation | remaining_activations] = building_activations
+# todo: cafe stuff here
+    new_game_state = pay_player(game_state, building_activation.to_player_id, building_activation.total_amount)
+    new_earn_income_result = %EarnIncomeResult{
+      building_activation: building_activation,
+      success: true
+    }
+    apply_building_activations(new_game_state, remaining_activations, earn_income_results ++ [new_earn_income_result])
   end
 
   # buildings

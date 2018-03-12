@@ -61,8 +61,30 @@ defmodule DiceTown.GameTest do
         phase: :earn_income
       }}
 
-      {:earned_income, [], new_game_state} = Game.earn_income(game_state, 1)
+      {:earned_income, earn_income_results, new_game_state} = Game.earn_income(game_state, 1)
 
+      # check earn_income_results
+      assert 2 == length(earn_income_results)
+      assert List.first(earn_income_results) == %Game.EarnIncomeResult{
+        building_activation: %Game.BuildingActivation{
+          building: :wheat_field,
+          count: 1,
+          to_player_id: 0,
+          from_player_id: nil,
+          total_amount: 1
+        },
+        success: true
+      }
+      assert List.last(earn_income_results) == %Game.EarnIncomeResult{
+        building_activation: %Game.BuildingActivation{
+          building: :wheat_field,
+          count: 1,
+          to_player_id: 1,
+          from_player_id: nil,
+          total_amount: 1
+        },
+        success: true
+      }
       # check moneys
       assert 4 == new_game_state.coins[0]
       assert 4 == new_game_state.coins[1]
@@ -77,8 +99,20 @@ defmodule DiceTown.GameTest do
         phase: :earn_income
       }}
 
-      {:earned_income, [], new_game_state} = Game.earn_income(game_state, 2)
+      {:earned_income, earn_income_results, new_game_state} = Game.earn_income(game_state, 2)
 
+      # check earn_income_results
+      assert 1 == length(earn_income_results)
+      assert List.first(earn_income_results) == %Game.EarnIncomeResult{
+        building_activation: %Game.BuildingActivation{
+          building: :bakery,
+          count: 1,
+          to_player_id: 0,
+          from_player_id: nil,
+          total_amount: 1
+        },
+        success: true
+      }
       # check moneys
       assert 4 == new_game_state.coins[0]
       assert 3 == new_game_state.coins[1]
