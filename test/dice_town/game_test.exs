@@ -103,4 +103,47 @@ defmodule DiceTown.GameTest do
       assert :construction == new_game_state.turn.phase
     end
   end
+
+  describe "building activations" do
+    test "with two players and initial buildings should activate wheat" do
+      buildings = @initial_state_two_player.buildings_built
+      current_player_id = 0
+      die_roll = 1
+
+      building_activiations = Game.calc_building_activiations(buildings, current_player_id, die_roll)
+      assert building_activiations == [
+        %Game.BuildingActivation{
+          building: :wheat_field,
+          count: 1,
+          to_player_id: 0,
+          from_player_id: nil,
+          total_amount: 1
+        },
+        %Game.BuildingActivation{
+          building: :wheat_field,
+          count: 1,
+          to_player_id: 1,
+          from_player_id: nil,
+          total_amount: 1
+        }
+      ]
+    end
+
+    test "with two players and initial buildings should activate bakery" do
+      buildings = @initial_state_two_player.buildings_built
+      current_player_id = 0
+      die_roll = 2
+
+      building_activiations = Game.calc_building_activiations(buildings, current_player_id, die_roll)
+      assert building_activiations == [
+        %Game.BuildingActivation{
+          building: :bakery,
+          count: 1,
+          to_player_id: 0,
+          from_player_id: nil,
+          total_amount: 1
+        }
+      ]
+    end
+  end
 end

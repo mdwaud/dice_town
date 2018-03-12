@@ -13,6 +13,10 @@ defmodule DiceTown.Game do
     defstruct players: [], buildings_built: %{}, buildings_available: %{}, coins: %{}, turn: nil
   end
 
+  defmodule BuildingActivation do
+    defstruct building: nil, count: nil, to_player_id: nil, from_player_id: nil, total_amount: nil
+  end
+
   # game logic
 
   def init_game_state(player_names) do
@@ -57,38 +61,71 @@ defmodule DiceTown.Game do
   end
 
   def earn_income(game_state, die_roll) do
+    building_activations = calc_building_activiations(game_state.buildings_built, game_state.turn.player_id, die_roll)
+
     new_game_state = game_state
-    |> wheat_field(die_roll)
-    |> bakery(die_roll)
+    |> apply_building_activations(building_activations)
     |> update_turn(game_state.turn.player_id, :construction)
 
     {:earned_income, [], new_game_state}
   end
 
+  def calc_building_activiations(buildings, current_player_id, die_roll) do
+    [:wheat_field, :bakery]
+    |> Enum.flat_map(fn(building) -> calc_building_activiations(buildings, current_player_id, die_roll, building) end)
+    |> List.flatten
+  end
+
+  def apply_building_activations(game_state, []), do: game_state
+
+  def apply_building_activations(game_state, building_activations) do
+    [building_activation | remaining_activations] = building_activations
+    new_game_state = pay_player(game_state, building_activation.to_player_id, building_activation.total_amount)
+
+    apply_building_activations(new_game_state, remaining_activations)
+  end
+
   # buildings
 
-  def wheat_field(game_state, 1) do
-    player_ids = game_state.players
-    |> Enum.map( fn(%Player{id: id}) -> id end)
-
-    pay_players(game_state, player_ids, 1)
+# figure out if the building is activated
+  def calc_building_activiations(buildings, _current_player_id, 1, :wheat_field) do
+    buildings
+    |> Enum.map(fn({player_id, building_map}) -> activate_building(building_map, player_id, :wheat_field) end)
   end
-  def wheat_field(game_state, _), do: game_state
+  def calc_building_activiations(_, _, _, :wheat_field), do: []
 
-  def bakery(game_state, die_roll) when die_roll in [2,3] do
-    pay_players(game_state, [game_state.turn.player_id], 1)
+  def calc_building_activiations(buildings, current_player_id, die_roll, :bakery) when die_roll >= 2 and die_roll <= 3 do
+    activate_building(buildings[current_player_id], current_player_id, :bakery)
   end
-  def bakery(game_state, _), do: game_state
+  def calc_building_activiations(_, _, _, :bakery), do: []
+
+# figure out the amount (if any)
+  def activate_building(%{wheat_field: count}, player_id, :wheat_field) when count > 0 do
+    [
+      %BuildingActivation{
+        building: :wheat_field,
+        count: count,
+        to_player_id: player_id,
+        from_player_id: nil,
+        total_amount: count
+      }
+    ]
+  end
+
+  def activate_building(%{bakery: count}, player_id, :bakery) when count > 0 do
+    [
+      %BuildingActivation{
+        building: :bakery,
+        count: count,
+        to_player_id: player_id,
+        from_player_id: nil,
+        total_amount: count
+      }
+    ]
+  end
+
 
   # utility methods
-  def pay_players(game_state, [], _), do: game_state
-  def pay_players(game_state, player_ids, amount) do
-    [player_id | other_player_ids] = player_ids
-
-    new_game_state = pay_player(game_state, player_id, amount)
-
-    pay_players(new_game_state, other_player_ids, amount)
-  end
 
   def pay_player(game_state, player_id, amount) do
     %GameState{game_state | coins: %{
