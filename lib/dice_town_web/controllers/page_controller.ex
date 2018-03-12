@@ -8,13 +8,9 @@ defmodule DiceTownWeb.PageController do
     player_names = ["Player 1"]
 
     {:ok, pid} = GameServer.start_link(player_names)
-IO.puts "PID"
-IO.inspect pid
+    game_state = GameServer.get_state(pid)
 
-    value = GameServer.get_state(pid)
-IO.puts "Game State"
-IO.inspect value
 
-    render conn, "index.html"
+    render conn, "index.html", %{game_state: game_state}
   end
 end
