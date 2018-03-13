@@ -81,12 +81,35 @@ defmodule DiceTown.Game.EarnIncomeTest do
       ]
     end
 
-  end
+    test "cafe should happen before bakery" do
+      buildings = %{
+        0 => %{
+          bakery: 1
+        },
+        1 => %{
+          cafe: 1
+        }
+      }
+      current_player_id = 0
+      die_roll = 3
 
-  describe "apply_building_activations" do
-    @tag :skip
-    test "a cafe against a player with no money should fail" do
-
+      building_activiations = EarnIncome.calc_building_activiations(buildings, current_player_id, die_roll)
+      assert building_activiations == [
+        %Game.BuildingActivation{
+          building: :cafe,
+          count: 1,
+          to_player_id: 1,
+          from_player_id: 0,
+          total_amount: 1
+        },
+        %Game.BuildingActivation{
+          building: :bakery,
+          count: 1,
+          to_player_id: 0,
+          from_player_id: nil,
+          total_amount: 1
+        }
+      ]
     end
   end
 end

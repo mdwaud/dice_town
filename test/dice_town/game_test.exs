@@ -30,13 +30,49 @@ defmodule DiceTown.GameTest do
     },
     buildings_available: %{
       wheat_field: 8,
-      bakery: 8
+      bakery: 8,
+      cafe: 8
     },
     turn: %Game.GameTurn{
       player_id: 0,
       phase: :roll_dice
     }
   }
+
+  @cafe_bankrupt_game_state %Game.GameState{
+    players: [
+      %Game.Player{
+        id: 0,
+        name: "Player 1"
+      },
+      %Game.Player{
+        id: 1,
+        name: "Player 2"
+      }
+    ],
+    buildings_built: %{
+      0 => %{
+        bakery: 1
+      },
+      1 => %{
+        cafe: 1
+      }
+    },
+    coins: %{
+      0 => 0,
+      1 => 0
+    },
+    buildings_available: %{
+      wheat_field: 8,
+      bakery: 7,
+      cafe: 7
+    },
+    turn: %Game.GameTurn{
+      player_id: 0,
+      phase: :earn_income
+    }
+  }
+
 
   describe "with two players" do
     test "game sets up correctly " do
@@ -135,6 +171,49 @@ defmodule DiceTown.GameTest do
       # check turn state
       assert 0 == new_game_state.turn.player_id
       assert :construction == new_game_state.turn.phase
+    end
+
+    test "rolling a 3 with no money (and someone owns a cafe) returns a failed EarnIncomeResult" do
+      game_state = %Game.GameState{@cafe_bankrupt_game_state | turn: %Game.GameTurn{
+        player_id: 0,
+        phase: :earn_income
+      }}
+
+      {:earned_income, earn_income_results, new_game_state} = Game.earn_income(game_state, 3)
+
+      # check earn_income_results
+      assert 2 == length(earn_income_results)
+      assert List.first(earn_income_results) == %Game.EarnIncomeResult{
+        building_activation: %Game.BuildingActivation{
+          building: :cafe,
+          count: 1,
+          to_player_id: 1,
+          from_player_id: 0,
+          total_amount: 1
+        },
+        success: false
+      }
+      assert List.last(earn_income_results) == %Game.EarnIncomeResult{
+        building_activation: %Game.BuildingActivation{
+          building: :bakery,
+          count: 1,
+          to_player_id: 0,
+          from_player_id: nil,
+          total_amount: 1
+        },
+        success: true
+      }
+      # check moneys
+      assert 1 == new_game_state.coins[0]
+      assert 0 == new_game_state.coins[1]
+      # check turn state
+      assert 0 == new_game_state.turn.player_id
+      assert :construction == new_game_state.turn.phase
+    end
+
+    @tag :skip
+    test "handle partial cafe payment" do
+
     end
   end
 end

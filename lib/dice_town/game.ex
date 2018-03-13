@@ -47,7 +47,8 @@ defmodule DiceTown.Game do
       coins: coins,
       buildings_available: %{
         wheat_field: 8,
-        bakery: 8
+        bakery: 8,
+        cafe: 8
       },
       turn: %GameTurn{
         player_id: List.first(player_ids),
