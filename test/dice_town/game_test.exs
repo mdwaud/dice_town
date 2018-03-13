@@ -263,5 +263,38 @@ defmodule DiceTown.GameTest do
       assert 0 == new_game_state.turn.player_id
       assert :construction == new_game_state.turn.phase
     end
+
+    test "can buy a building" do
+      game_state = %Game.GameState{@initial_state_two_player | turn: %Game.GameTurn{
+        player_id: 0,
+        phase: :construction
+      }}
+
+      {:built, :wheat_field, new_game_state} = Game.build(game_state, 0, :wheat_field)
+
+      # check moneys
+      assert 2 == new_game_state.coins[0]
+      assert 3 == new_game_state.coins[1]
+      # check turn state
+      assert 1 == new_game_state.turn.player_id
+      assert :roll_dice == new_game_state.turn.phase
+    end
+  end
+
+  describe "utility methods" do
+    test "next_player incremental" do
+      game_state = @initial_state_two_player
+
+      assert 1 == Game.next_player(game_state)
+    end
+
+    test "next_player full revolution" do
+      game_state = %Game.GameState{@initial_state_two_player | turn: %Game.GameTurn{
+        player_id: 1,
+        phase: :construction
+      }}
+
+      assert 0 == Game.next_player(game_state)
+    end
   end
 end

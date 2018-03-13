@@ -1,5 +1,6 @@
 defmodule DiceTown.Game do
   alias DiceTown.Game.EarnIncome
+  alias DiceTown.Game.Construction
 
   # state struct
 
@@ -78,6 +79,22 @@ defmodule DiceTown.Game do
     {:earned_income, earn_income_results, new_game_state}
   end
 
+  def build(game_state, player_id, building) do
+    case Construction.build(game_state, player_id, building) do
+      {:ok, built_game_state} ->
+        # eventually check for victory conditions here
+        new_game_state = built_game_state
+        |> update_turn(next_player(built_game_state), :roll_dice)
+
+        {:built, building, new_game_state}
+      {:error, reason} ->
+        {:error, reason}
+    end
+
+    # building available
+    # player has enough money
+
+  end
 
   # utility methods
 
@@ -86,5 +103,26 @@ defmodule DiceTown.Game do
       player_id: player_id,
       phase: phase
     }}
+  end
+
+  def next_player(game_state) do
+    current_player_id = game_state.turn.player_id
+    player_ids = game_state.players
+    |> Enum.map( fn(%Player{id: id}) -> id end)
+
+    cond do
+      current_player_id == List.last(player_ids) ->
+        # loop to the first player
+        List.first(player_ids)
+      true ->
+        # go to the next player
+        _next_player(player_ids, current_player_id)
+    end
+  end
+
+  # recursion is fun?
+  defp _next_player([player_id | [next | _] ], player_id), do: next
+  defp _next_player([_ | rest], player_id) do
+    _next_player(rest, player_id)
   end
 end
