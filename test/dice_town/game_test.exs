@@ -84,8 +84,10 @@ defmodule DiceTown.GameTest do
     test "initial roll works" do
       game_state = @initial_state_two_player
 
-      {:die_roll, die_roll, new_game_state} = Game.roll_dice(game_state, 0)
+      {:die_roll, result, new_game_state} = Game.roll_dice(game_state, 0)
+      %{player_id: player_id, die_roll: die_roll} = result
 
+      assert 0 == player_id
       assert 1 >= die_roll >= 6
       assert 0 == new_game_state.turn.player_id
       assert :earn_income == new_game_state.turn.phase

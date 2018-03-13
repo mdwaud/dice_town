@@ -58,17 +58,17 @@ defmodule DiceTown.Game do
   end
 
   # only care about one die for now
-  def roll_dice(game_state, _player_id) do
-    result = Enum.random(1..6)
+  def roll_dice(game_state, player_id) do
+    die_roll = Enum.random(1..6)
 
     new_game_state = game_state
     |> update_turn(game_state.turn.player_id, :earn_income)
 
-    {:die_roll, result, new_game_state}
+    {:die_roll, %{player_id: player_id, die_roll: die_roll}, new_game_state}
   end
 
-  def earn_income(game_state, _player_id, die_roll) do
-    building_activations = EarnIncome.calc_building_activiations(game_state.buildings_built, game_state.turn.player_id, die_roll)
+  def earn_income(game_state, player_id, die_roll) do
+    building_activations = EarnIncome.calc_building_activiations(game_state.buildings_built, player_id, die_roll)
     {temp_game_state, earn_income_results} = game_state
     |> EarnIncome.apply_building_activations(building_activations)
 
