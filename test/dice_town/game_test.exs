@@ -84,7 +84,7 @@ defmodule DiceTown.GameTest do
     test "initial roll works" do
       game_state = @initial_state_two_player
 
-      {:die_roll, die_roll, new_game_state} = Game.roll_dice(game_state)
+      {:die_roll, die_roll, new_game_state} = Game.roll_dice(game_state, 0)
 
       assert 1 >= die_roll >= 6
       assert 0 == new_game_state.turn.player_id
@@ -97,7 +97,7 @@ defmodule DiceTown.GameTest do
         phase: :earn_income
       }}
 
-      {:earned_income, earn_income_results, new_game_state} = Game.earn_income(game_state, 1)
+      {:earned_income, earn_income_results, new_game_state} = Game.earn_income(game_state, 0, 1)
 
       # check earn_income_results
       assert 2 == length(earn_income_results)
@@ -135,7 +135,7 @@ defmodule DiceTown.GameTest do
         phase: :earn_income
       }}
 
-      {:earned_income, earn_income_results, new_game_state} = Game.earn_income(game_state, 2)
+      {:earned_income, earn_income_results, new_game_state} = Game.earn_income(game_state, 0, 2)
 
       # check earn_income_results
       assert 1 == length(earn_income_results)
@@ -163,7 +163,7 @@ defmodule DiceTown.GameTest do
         phase: :earn_income
       }}
 
-      {:earned_income, [], new_game_state} = Game.earn_income(game_state, 4)
+      {:earned_income, [], new_game_state} = Game.earn_income(game_state, 0, 4)
 
       # check moneys
       assert 3 == new_game_state.coins[0]
@@ -179,7 +179,7 @@ defmodule DiceTown.GameTest do
         phase: :earn_income
       }}
 
-      {:earned_income, earn_income_results, new_game_state} = Game.earn_income(game_state, 3)
+      {:earned_income, earn_income_results, new_game_state} = Game.earn_income(game_state, 0, 3)
 
       # check earn_income_results
       assert 2 == length(earn_income_results)
@@ -230,7 +230,7 @@ defmodule DiceTown.GameTest do
         }
       }
 
-      {:earned_income, earn_income_results, new_game_state} = Game.earn_income(game_state, 3)
+      {:earned_income, earn_income_results, new_game_state} = Game.earn_income(game_state, 0, 3)
 
       # check earn_income_results
       assert 2 == length(earn_income_results)
