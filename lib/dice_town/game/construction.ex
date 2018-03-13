@@ -9,12 +9,23 @@ defmodule DiceTown.Game.Construction do
   }
 
   def build(game_state, player_id, building) do
-    new_game_state = game_state
-    # todo: check moneys
-    # todo: check building availability
-    |> build_building(player_id, building)
-    |> pay_player(player_id, -@building_costs[building])
-    {:ok, new_game_state}
+    cond do
+      # check moneys that a building exists
+      is_nil(@building_costs[building]) ->
+        {:error, :does_not_exist}
+      # check that there are buildings availabile
+      game_state.buildings_available[building] == 0 ->
+        {:error, :no_buildings_left}
+      # check the player has enough money
+      game_state.coins[player_id] < @building_costs[building] ->
+        {:error, :insufficient_coins}
+      # looks good
+      true ->
+        new_game_state = game_state
+        |> build_building(player_id, building)
+        |> pay_player(player_id, -@building_costs[building])
+        {:ok, new_game_state}
+    end
   end
 
   # actually build the building
@@ -27,6 +38,10 @@ defmodule DiceTown.Game.Construction do
   end
 
   # utility methods
+
+  def get_player_coins(game_state, player_id) do
+    game_state.coins[player_id]
+  end
 
   def pay_player(game_state, player_id, amount) do
     %Game.GameState{game_state | coins: %{
