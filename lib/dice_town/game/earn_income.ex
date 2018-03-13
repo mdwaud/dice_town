@@ -100,17 +100,21 @@ defmodule DiceTown.Game.EarnIncome do
   def resolve_activation(game_state, building_activation) do
     cond do
       game_state.coins[building_activation.from_player_id] >= building_activation.total_amount ->
-        new_game_state = pay_player(game_state, building_activation.to_player_id, building_activation.total_amount)
-        new_game_state = pay_player(game_state, building_activation.from_player_id, -building_activation.total_amount)
+        # pay the amount, since they have it
+        new_game_state = game_state
+        |> pay_player(building_activation.to_player_id, building_activation.total_amount)
+        |> pay_player(building_activation.from_player_id, -building_activation.total_amount)
         new_earn_income_result = %EarnIncomeResult{
           building_activation: building_activation,
           success: true
         }
         {new_game_state, new_earn_income_result}
       true ->
+        # pay as much as they have
         total_amount = game_state.coins[building_activation.from_player_id]
-        new_game_state = pay_player(game_state, building_activation.to_player_id, total_amount)
-        new_game_state = pay_player(game_state, building_activation.from_player_id, -total_amount)
+        new_game_state = game_state
+        |> pay_player(building_activation.to_player_id, total_amount)
+        |> pay_player(building_activation.from_player_id, -total_amount)
         new_earn_income_result = %EarnIncomeResult{
           building_activation: building_activation,
           success: false

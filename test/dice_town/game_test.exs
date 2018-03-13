@@ -211,9 +211,55 @@ defmodule DiceTown.GameTest do
       assert :construction == new_game_state.turn.phase
     end
 
-    @tag :skip
     test "handle partial cafe payment" do
+      game_state = %Game.GameState{@cafe_bankrupt_game_state | turn: %Game.GameTurn{
+        player_id: 0,
+        phase: :earn_income
+      },
+        buildings_built: %{
+          0 => %{
+            bakery: 1
+          },
+          1 => %{
+            cafe: 2
+          }
+        },
+        coins: %{
+          0 => 1,
+          1 => 0
+        }
+      }
 
+      {:earned_income, earn_income_results, new_game_state} = Game.earn_income(game_state, 3)
+
+      # check earn_income_results
+      assert 2 == length(earn_income_results)
+      assert List.first(earn_income_results) == %Game.EarnIncomeResult{
+        building_activation: %Game.BuildingActivation{
+          building: :cafe,
+          count: 2,
+          to_player_id: 1,
+          from_player_id: 0,
+          total_amount: 2
+        },
+        success: false
+      }
+      assert List.last(earn_income_results) == %Game.EarnIncomeResult{
+        building_activation: %Game.BuildingActivation{
+          building: :bakery,
+          count: 1,
+          to_player_id: 0,
+          from_player_id: nil,
+          total_amount: 1
+        },
+        success: true
+      }
+      # check moneys
+      assert 1 == new_game_state.coins[0]
+      assert 1 == new_game_state.coins[1]
+      # check turn state
+      assert 0 == new_game_state.turn.player_id
+      assert :construction == new_game_state.turn.phase
     end
   end
 end

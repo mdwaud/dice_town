@@ -69,7 +69,6 @@ defmodule DiceTown.Game do
 
   def earn_income(game_state, die_roll) do
     building_activations = EarnIncome.calc_building_activiations(game_state.buildings_built, game_state.turn.player_id, die_roll)
-
     {temp_game_state, earn_income_results} = game_state
     |> EarnIncome.apply_building_activations(building_activations)
 
