@@ -16,7 +16,7 @@ defmodule DiceTown.GameServer do
   # server
 
   def init(player_names) do
-    game_state = Game.init_game_state(player_names)
+    game_state = Game.init(player_names)
     {:ok, game_state}
   end
 

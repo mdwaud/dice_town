@@ -2,14 +2,16 @@ defmodule DiceTown.GameTest do
   use ExUnit.Case
 
   alias DiceTown.Game
+  alias DiceTown.Game.EarnIncome
+  alias DiceTown.Game.GameState
 
-  @initial_state_two_player %Game.GameState{
+  @initial_state_two_player %GameState{
     players: [
-      %Game.Player{
+      %GameState.Player{
         id: 0,
         name: "Player 1"
       },
-      %Game.Player{
+      %GameState.Player{
         id: 1,
         name: "Player 2"
       }
@@ -33,19 +35,19 @@ defmodule DiceTown.GameTest do
       bakery: 8,
       cafe: 8
     },
-    turn: %Game.GameTurn{
+    turn: %GameState.GameTurn{
       player_id: 0,
       phase: :roll_dice
     }
   }
 
-  @cafe_bankrupt_game_state %Game.GameState{
+  @cafe_bankrupt_game_state %GameState{
     players: [
-      %Game.Player{
+      %GameState.Player{
         id: 0,
         name: "Player 1"
       },
-      %Game.Player{
+      %GameState.Player{
         id: 1,
         name: "Player 2"
       }
@@ -67,7 +69,7 @@ defmodule DiceTown.GameTest do
       bakery: 7,
       cafe: 7
     },
-    turn: %Game.GameTurn{
+    turn: %GameState.GameTurn{
       player_id: 0,
       phase: :earn_income
     }
@@ -76,7 +78,7 @@ defmodule DiceTown.GameTest do
 
   describe "with two players" do
     test "game sets up correctly " do
-      game_state = Game.init_game_state(["Player 1", "Player 2"])
+      game_state = GameState.init_game_state(["Player 1", "Player 2"])
 
       assert game_state == @initial_state_two_player
     end
@@ -94,7 +96,7 @@ defmodule DiceTown.GameTest do
     end
 
     test "rolling a 1 pays everyone (wheat)" do
-      game_state = %Game.GameState{@initial_state_two_player | turn: %Game.GameTurn{
+      game_state = %GameState{@initial_state_two_player | turn: %GameState.GameTurn{
         player_id: 0,
         phase: :earn_income
       }}
@@ -103,8 +105,8 @@ defmodule DiceTown.GameTest do
 
       # check earn_income_results
       assert 2 == length(earn_income_results)
-      assert List.first(earn_income_results) == %Game.EarnIncomeResult{
-        building_activation: %Game.BuildingActivation{
+      assert List.first(earn_income_results) == %EarnIncome.EarnIncomeResult{
+        building_activation: %EarnIncome.BuildingActivation{
           building: :wheat_field,
           count: 1,
           to_player_id: 0,
@@ -113,8 +115,8 @@ defmodule DiceTown.GameTest do
         },
         success: true
       }
-      assert List.last(earn_income_results) == %Game.EarnIncomeResult{
-        building_activation: %Game.BuildingActivation{
+      assert List.last(earn_income_results) == %EarnIncome.EarnIncomeResult{
+        building_activation: %EarnIncome.BuildingActivation{
           building: :wheat_field,
           count: 1,
           to_player_id: 1,
@@ -132,7 +134,7 @@ defmodule DiceTown.GameTest do
     end
 
     test "rolling a 2 pays roller (bakery)" do
-      game_state = %Game.GameState{@initial_state_two_player | turn: %Game.GameTurn{
+      game_state = %GameState{@initial_state_two_player | turn: %GameState.GameTurn{
         player_id: 0,
         phase: :earn_income
       }}
@@ -141,8 +143,8 @@ defmodule DiceTown.GameTest do
 
       # check earn_income_results
       assert 1 == length(earn_income_results)
-      assert List.first(earn_income_results) == %Game.EarnIncomeResult{
-        building_activation: %Game.BuildingActivation{
+      assert List.first(earn_income_results) == %EarnIncome.EarnIncomeResult{
+        building_activation: %EarnIncome.BuildingActivation{
           building: :bakery,
           count: 1,
           to_player_id: 0,
@@ -160,7 +162,7 @@ defmodule DiceTown.GameTest do
     end
 
     test "rolling a 4 pays no one" do
-      game_state = %Game.GameState{@initial_state_two_player | turn: %Game.GameTurn{
+      game_state = %Game.GameState{@initial_state_two_player | turn: %GameState.GameTurn{
         player_id: 0,
         phase: :earn_income
       }}
@@ -176,7 +178,7 @@ defmodule DiceTown.GameTest do
     end
 
     test "rolling a 3 with no money (and someone owns a cafe) returns a failed EarnIncomeResult" do
-      game_state = %Game.GameState{@cafe_bankrupt_game_state | turn: %Game.GameTurn{
+      game_state = %Game.GameState{@cafe_bankrupt_game_state | turn: %GameState.GameTurn{
         player_id: 0,
         phase: :earn_income
       }}
@@ -185,8 +187,8 @@ defmodule DiceTown.GameTest do
 
       # check earn_income_results
       assert 2 == length(earn_income_results)
-      assert List.first(earn_income_results) == %Game.EarnIncomeResult{
-        building_activation: %Game.BuildingActivation{
+      assert List.first(earn_income_results) == %EarnIncome.EarnIncomeResult{
+        building_activation: %EarnIncome.BuildingActivation{
           building: :cafe,
           count: 1,
           to_player_id: 1,
@@ -195,8 +197,8 @@ defmodule DiceTown.GameTest do
         },
         success: false
       }
-      assert List.last(earn_income_results) == %Game.EarnIncomeResult{
-        building_activation: %Game.BuildingActivation{
+      assert List.last(earn_income_results) == %EarnIncome.EarnIncomeResult{
+        building_activation: %EarnIncome.BuildingActivation{
           building: :bakery,
           count: 1,
           to_player_id: 0,
@@ -214,7 +216,7 @@ defmodule DiceTown.GameTest do
     end
 
     test "handle partial cafe payment" do
-      game_state = %Game.GameState{@cafe_bankrupt_game_state | turn: %Game.GameTurn{
+      game_state = %Game.GameState{@cafe_bankrupt_game_state | turn: %GameState.GameTurn{
         player_id: 0,
         phase: :earn_income
       },
@@ -236,8 +238,8 @@ defmodule DiceTown.GameTest do
 
       # check earn_income_results
       assert 2 == length(earn_income_results)
-      assert List.first(earn_income_results) == %Game.EarnIncomeResult{
-        building_activation: %Game.BuildingActivation{
+      assert List.first(earn_income_results) == %EarnIncome.EarnIncomeResult{
+        building_activation: %EarnIncome.BuildingActivation{
           building: :cafe,
           count: 2,
           to_player_id: 1,
@@ -246,8 +248,8 @@ defmodule DiceTown.GameTest do
         },
         success: false
       }
-      assert List.last(earn_income_results) == %Game.EarnIncomeResult{
-        building_activation: %Game.BuildingActivation{
+      assert List.last(earn_income_results) == %EarnIncome.EarnIncomeResult{
+        building_activation: %EarnIncome.BuildingActivation{
           building: :bakery,
           count: 1,
           to_player_id: 0,
@@ -265,7 +267,7 @@ defmodule DiceTown.GameTest do
     end
 
     test "can buy a building" do
-      game_state = %Game.GameState{@initial_state_two_player | turn: %Game.GameTurn{
+      game_state = %Game.GameState{@initial_state_two_player | turn: %GameState.GameTurn{
         player_id: 0,
         phase: :construction
       }}
@@ -278,23 +280,6 @@ defmodule DiceTown.GameTest do
       # check turn state
       assert 1 == new_game_state.turn.player_id
       assert :roll_dice == new_game_state.turn.phase
-    end
-  end
-
-  describe "utility methods" do
-    test "next_player incremental" do
-      game_state = @initial_state_two_player
-
-      assert 1 == Game.next_player(game_state)
-    end
-
-    test "next_player full revolution" do
-      game_state = %Game.GameState{@initial_state_two_player | turn: %Game.GameTurn{
-        player_id: 1,
-        phase: :construction
-      }}
-
-      assert 0 == Game.next_player(game_state)
     end
   end
 end

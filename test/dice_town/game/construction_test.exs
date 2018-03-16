@@ -2,15 +2,16 @@ defmodule DiceTown.Game.ConstructionTest do
   use ExUnit.Case
 
   alias DiceTown.Game
+  alias DiceTown.Game.GameState
   alias DiceTown.Game.Construction
 
-  @initial_state_two_player %Game.GameState{
+  @initial_state_two_player %GameState{
     players: [
-      %Game.Player{
+      %GameState.Player{
         id: 0,
         name: "Player 1"
       },
-      %Game.Player{
+      %GameState.Player{
         id: 1,
         name: "Player 2"
       }
@@ -33,7 +34,7 @@ defmodule DiceTown.Game.ConstructionTest do
       wheat_field: 8,
       bakery: 8
     },
-    turn: %Game.GameTurn{
+    turn: %GameState.GameTurn{
       player_id: 0,
       phase: :roll_dice
     }

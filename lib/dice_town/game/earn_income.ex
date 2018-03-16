@@ -1,9 +1,17 @@
 defmodule DiceTown.Game.EarnIncome do
   alias DiceTown.Game
-  alias DiceTown.Game.BuildingActivation
+  alias DiceTown.Game.GameState
   alias DiceTown.Game.EarnIncomeResult
 
   @building_order Enum.reverse([:wheat_field, :bakery, :cafe])
+
+  defmodule BuildingActivation do
+    defstruct building: nil, count: nil, to_player_id: nil, from_player_id: nil, total_amount: nil
+  end
+
+  defmodule EarnIncomeResult do
+    defstruct building_activation: nil, success: nil
+  end
 
   def calc_building_activiations(buildings, current_player_id, die_roll) do
     @building_order
@@ -88,7 +96,7 @@ defmodule DiceTown.Game.EarnIncome do
   # this is mostly to deal with actions that might fails (ex: paying another player)
 
   def resolve_activation(game_state, building_activation = %BuildingActivation{from_player_id: nil}) do
-    new_game_state = pay_player(game_state, building_activation.to_player_id, building_activation.total_amount)
+    new_game_state = GameState.pay_player(game_state, building_activation.to_player_id, building_activation.total_amount)
     new_earn_income_result = %EarnIncomeResult{
       building_activation: building_activation,
       success: true
@@ -102,8 +110,8 @@ defmodule DiceTown.Game.EarnIncome do
       game_state.coins[building_activation.from_player_id] >= building_activation.total_amount ->
         # pay the amount, since they have it
         new_game_state = game_state
-        |> pay_player(building_activation.to_player_id, building_activation.total_amount)
-        |> pay_player(building_activation.from_player_id, -building_activation.total_amount)
+        |> GameState.pay_player(building_activation.to_player_id, building_activation.total_amount)
+        |> GameState.pay_player(building_activation.from_player_id, -building_activation.total_amount)
         new_earn_income_result = %EarnIncomeResult{
           building_activation: building_activation,
           success: true
@@ -113,21 +121,13 @@ defmodule DiceTown.Game.EarnIncome do
         # pay as much as they have
         total_amount = game_state.coins[building_activation.from_player_id]
         new_game_state = game_state
-        |> pay_player(building_activation.to_player_id, total_amount)
-        |> pay_player(building_activation.from_player_id, -total_amount)
+        |> GameState.pay_player(building_activation.to_player_id, total_amount)
+        |> GameState.pay_player(building_activation.from_player_id, -total_amount)
         new_earn_income_result = %EarnIncomeResult{
           building_activation: building_activation,
           success: false
         }
         {new_game_state, new_earn_income_result}
     end
-  end
-
-  # utility methods
-
-  def pay_player(game_state, player_id, amount) do
-    %Game.GameState{game_state | coins: %{
-      game_state.coins | player_id => game_state.coins[player_id] + amount
-    }}
   end
 end

@@ -22,30 +22,9 @@ defmodule DiceTown.Game.Construction do
       # looks good
       true ->
         new_game_state = game_state
-        |> build_building(player_id, building)
-        |> pay_player(player_id, -@building_costs[building])
+        |> GameState.build_building(player_id, building)
+        |> GameState.pay_player(player_id, -@building_costs[building])
         {:ok, new_game_state}
     end
-  end
-
-  # actually build the building
-  def build_building(game_state, player_id, building) do
-    %GameState{game_state | buildings_built: %{game_state.buildings_built |
-      player_id => %{game_state.buildings_built[player_id] |
-        building => game_state.buildings_built[player_id][building] + 1
-      }
-    }}
-  end
-
-  # utility methods
-
-  def get_player_coins(game_state, player_id) do
-    game_state.coins[player_id]
-  end
-
-  def pay_player(game_state, player_id, amount) do
-    %Game.GameState{game_state | coins: %{
-      game_state.coins | player_id => game_state.coins[player_id] + amount
-    }}
   end
 end

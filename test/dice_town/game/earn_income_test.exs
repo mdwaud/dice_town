@@ -1,16 +1,16 @@
 defmodule DiceTown.Game.EarnIncomeTest do
   use ExUnit.Case
 
-  alias DiceTown.Game
+  alias DiceTown.Game.GameState
   alias DiceTown.Game.EarnIncome
 
-  @initial_state_two_player %Game.GameState{
+  @initial_state_two_player %GameState{
     players: [
-      %Game.Player{
+      %GameState.Player{
         id: 0,
         name: "Player 1"
       },
-      %Game.Player{
+      %GameState.Player{
         id: 1,
         name: "Player 2"
       }
@@ -33,7 +33,7 @@ defmodule DiceTown.Game.EarnIncomeTest do
       wheat_field: 8,
       bakery: 8
     },
-    turn: %Game.GameTurn{
+    turn: %GameState.GameTurn{
       player_id: 0,
       phase: :roll_dice
     }
@@ -47,14 +47,14 @@ defmodule DiceTown.Game.EarnIncomeTest do
 
       building_activiations = EarnIncome.calc_building_activiations(buildings, current_player_id, die_roll)
       assert building_activiations == [
-        %Game.BuildingActivation{
+        %EarnIncome.BuildingActivation{
           building: :wheat_field,
           count: 1,
           to_player_id: 0,
           from_player_id: nil,
           total_amount: 1
         },
-        %Game.BuildingActivation{
+        %EarnIncome.BuildingActivation{
           building: :wheat_field,
           count: 1,
           to_player_id: 1,
@@ -71,7 +71,7 @@ defmodule DiceTown.Game.EarnIncomeTest do
 
       building_activiations = EarnIncome.calc_building_activiations(buildings, current_player_id, die_roll)
       assert building_activiations == [
-        %Game.BuildingActivation{
+        %EarnIncome.BuildingActivation{
           building: :bakery,
           count: 1,
           to_player_id: 0,
@@ -95,14 +95,14 @@ defmodule DiceTown.Game.EarnIncomeTest do
 
       building_activiations = EarnIncome.calc_building_activiations(buildings, current_player_id, die_roll)
       assert building_activiations == [
-        %Game.BuildingActivation{
+        %EarnIncome.BuildingActivation{
           building: :cafe,
           count: 1,
           to_player_id: 1,
           from_player_id: 0,
           total_amount: 1
         },
-        %Game.BuildingActivation{
+        %EarnIncome.BuildingActivation{
           building: :bakery,
           count: 1,
           to_player_id: 0,
