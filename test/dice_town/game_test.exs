@@ -1,7 +1,7 @@
 defmodule DiceTown.GameTest do
   use ExUnit.Case
 
-  alias DiceTown.Game
+#  alias DiceTown.Game
 
   describe "with two players" do
     @tag :skip

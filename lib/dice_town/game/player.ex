@@ -67,4 +67,17 @@ defmodule DiceTown.Game.Player do
         {:from_bank, count}
     end
   end
+
+  defp building_activation(buildings, :bakery, die_roll, true) when 2 >= die_roll >= 3 do
+    case buildings[:bakery] do
+      0 ->
+        nil
+      count ->
+        {:from_bank, count}
+    end
+  end
+
+  defp building_activation(buildings, _, _, _is_current_player) do
+    nil
+  end
 end
