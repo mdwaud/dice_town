@@ -58,13 +58,35 @@ defmodule DiceTown.PlayerTest do
     end
 
     @tag buildings: %{bakery: 1}
-    test "bakery activates if owned on other player's turn turn", %{player: player} do
+    test "bakery does not activate if owned on other player's turn", %{player: player} do
       assert nil == Player.earn_income(player, :bakery, 2, false)
     end
 
     @tag buildings: %{bakery: 0}
     test "bakery does not activate if not owned", %{player: player} do
       assert nil == Player.earn_income(player, :bakery, 2, true)
+    end
+  end
+
+  describe "earning income on a cafe" do
+    setup context do
+      player = start_supervised!({Player, %{buildings: context[:buildings]}})
+      %{player: player}
+    end
+
+    @tag buildings: %{cafe: 1}
+    test "cafe does not activate if owned on own turn", %{player: player} do
+      assert nil == Player.earn_income(player, :cafe, 3, true)
+    end
+
+    @tag buildings: %{cafe: 1}
+    test "cafe activates if owned on other player's turn", %{player: player} do
+      assert {:from_current_player, 1} == Player.earn_income(player, :cafe, 3, false)
+    end
+
+    @tag buildings: %{cafe: 0}
+    test "cafe does not activate if not owned", %{player: player} do
+      assert nil == Player.earn_income(player, :cafe, 3, false)
     end
   end
 end

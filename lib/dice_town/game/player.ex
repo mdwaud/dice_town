@@ -77,6 +77,15 @@ defmodule DiceTown.Game.Player do
     end
   end
 
+  defp building_activation(buildings, :cafe, 3, false) do
+    case buildings[:cafe] do
+      0 ->
+        nil
+      count ->
+        {:from_current_player, count}
+    end
+  end
+
   defp building_activation(buildings, _, _, _is_current_player) do
     nil
   end
