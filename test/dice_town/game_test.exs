@@ -1,11 +1,23 @@
 defmodule DiceTown.GameTest do
   use ExUnit.Case
 
-#  alias DiceTown.Game
+  alias DiceTown.Game
 
   describe "with two players" do
-    @tag :skip
-    test "game sets up correctly " do
+    setup do
+      game = start_supervised!({Game, ["Player 1", "Player 2"]})
+      %{game: game}
+    end
+
+    test "game sets up correctly", %{game: game} do
+      game_state = Game.get_state(game)
+
+      assert 3 == game_state[:players][0].coins
+      assert 3 == game_state[:players][1].coins
+      assert 1 == game_state[:players][0].buildings[:wheat_field]
+      assert 1 == game_state[:players][1].buildings[:wheat_field]
+      assert 1 == game_state[:players][0].buildings[:bakery]
+      assert 1 == game_state[:players][1].buildings[:bakery]
     end
 
     @tag :skip

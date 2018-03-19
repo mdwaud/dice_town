@@ -1,5 +1,47 @@
 defmodule DiceTown.Game do
+  use GenServer
 
+  alias DiceTown.Game
+  alias DiceTown.Game.Player
+
+  defmodule GameState do
+    defstruct players: []
+  end
+
+  # client
+
+  def get_state(pid) do
+    GenServer.call(pid, :get_state)
+  end
+
+  def start_link(player_names) do
+    GenServer.start_link(__MODULE__, player_names)
+  end
+
+  # server
+
+  def init(player_names) do
+    players = player_names
+    |> Enum.with_index
+    |> Enum.map( fn({name, index}) -> [index, Player.start_link(%{})] end )
+    |> Enum.map( fn([index, {:ok, player}]) -> {index, player} end )
+    |> Map.new
+
+    game_state = %GameState{
+      players: players
+    }
+    {:ok, game_state}
+  end
+
+  def handle_call(:get_state, _from, game_state) do
+    players_map = game_state.players
+    |> Enum.map(fn({id, player}) -> {id, Player.get_state(player)} end)
+    |> Map.new
+    result = %{
+      players: players_map
+    }
+    {:reply, result, game_state}
+  end
   # state struct
 
   def init_game_state(player_names) do
@@ -76,16 +118,16 @@ defmodule DiceTown.Game do
   end
 
   def build(game_state, player_id, building) do
-    case Construction.build(game_state, player_id, building) do
-      {:ok, built_game_state} ->
-        # eventually check for victory conditions here
-        new_game_state = built_game_state
-        |> update_turn(next_player(built_game_state), :roll_dice)
-
-        {:built, building, new_game_state}
-      {:error, reason} ->
-        {:error, reason}
-    end
+#    case Construction.build(game_state, player_id, building) do
+#      {:ok, built_game_state} ->
+#        # eventually check for victory conditions here
+#        new_game_state = built_game_state
+#        |> update_turn(next_player(built_game_state), :roll_dice)
+#
+#        {:built, building, new_game_state}
+#      {:error, reason} ->
+#        {:error, reason}
+#    end
 
     # building available
     # player has enough money
