@@ -7,6 +7,11 @@ defmodule DiceTown.Game.Player do
 
   @initial_buildings %{wheat_field: 1, bakery: 1}
   @initial_coins 3
+  @building_costs %{
+    wheat_field: 1,
+    bakery: 1,
+    cafe: 2
+  }
 
   # client
 
@@ -30,12 +35,16 @@ defmodule DiceTown.Game.Player do
     #{:from_any_player}
   end
 
+  def build(player, building) do
+    GenServer.call(player, {:build, building})
+  end
+
   # server
 
   def init(opts) do
     player_state = %PlayerState{
       buildings: opts[:buildings] || @initial_buildings,
-      coins: @initial_coins
+      coins: opts[:coins] || @initial_coins
     }
     {:ok, player_state}
   end
@@ -55,6 +64,29 @@ defmodule DiceTown.Game.Player do
   def handle_call({:earn_income, building, die_roll, is_current_player}, _from, player_state) do
     result = building_activation(player_state.buildings, building, die_roll, is_current_player)
     {:reply, result, player_state}
+  end
+
+  def handle_call({:build, building}, _from, player_state) do
+    coins = player_state.coins
+    case @building_costs[building] do
+      nil ->
+        {:reply, :unrecognized_building, player_state}
+      amount when amount <= coins ->
+        {:reply, :ok, do_build(player_state, building)}
+      _ ->
+        {:reply, :insufficient_coins, player_state}
+    end
+  end
+
+  # utility methods
+
+  defp do_build(player_state, building) do
+    current_building_count = Map.get(player_state.buildings, building, 0)
+    new_buildings_map = Map.merge(%{building => current_building_count + 1}, player_state.buildings)
+    %PlayerState{player_state |
+      buildings: new_buildings_map,
+      coins: player_state.coins - @building_costs[building]
+    }
   end
 
   # building specific logic

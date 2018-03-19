@@ -89,4 +89,36 @@ defmodule DiceTown.PlayerTest do
       assert nil == Player.earn_income(player, :cafe, 3, false)
     end
   end
+
+  describe "construction" do
+    test "building a wheat_field with enough money" do
+      player = start_supervised!({Player, %{buildings: %{}, coins: 1}})
+
+      :ok = Player.build(player, :wheat_field)
+      player_state = Player.get_state(player)
+
+      assert 0 == player_state.coins
+      assert %{wheat_field: 1} == player_state.buildings
+    end
+
+    test "building a wheat_field with insufficient money" do
+      player = start_supervised!({Player, %{buildings: %{}, coins: 0}})
+
+      :insufficient_coins = Player.build(player, :wheat_field)
+      player_state = Player.get_state(player)
+
+      assert 0 == player_state.coins
+      assert %{} == player_state.buildings
+      #assert %{wheat_field: 0} == player_state.buildings
+    end
+
+    test "building a unrecognized building returns an error" do
+      player = start_supervised!(Player)
+
+      :unrecognized_building = Player.build(player, :rocket_ship)
+      player_state = Player.get_state(player)
+
+      assert 3 == player_state.coins
+    end
+  end
 end
