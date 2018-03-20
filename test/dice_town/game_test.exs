@@ -42,41 +42,44 @@ defmodule DiceTown.GameTest do
       assert [0,1] == game_state[:player_order]
     end
 
-    @tag :skip
-    test "notifies everyone", %{game: game} do
+    test "notifies with the correct actions", %{game: game} do
       {_game_state, actions} = Game.roll_dice(game, 0)
 
       # check actions
       assert actions == [
         {:die_roll, 1},
-        {:earn_income, %{player_id: 0, from: :bank, building: :wheat_field, amount: 1}},
-        {:earn_income, %{player_id: 1, from: :bank, building: :wheat_field, amount: 1}}
+        {:earn_income, %{player_id: 1, from: :bank, building: :wheat_field, amount: 1}},
+        {:earn_income, %{player_id: 0, from: :bank, building: :wheat_field, amount: 1}}
       ]
+    end
+
+    @tag :skip
+    test "notifies everyone" do
     end
 
     @tag :skip
     test "only current player can roll the dice" do
     end
+  end
 
-    @tag :skip
-    test "rolling a 2 pays roller (bakery)" do
-    end
+  @tag :skip
+  test "rolling a 2 pays roller (bakery)" do
+  end
 
-    @tag :skip
-    test "rolling a 4 pays no one" do
-    end
+  @tag :skip
+  test "rolling a 4 pays no one" do
+  end
 
-    @tag :skip
-    test "rolling a 3 with no money (and someone owns a cafe) returns a failed EarnIncomeResult" do
-    end
+  @tag :skip
+  test "rolling a 3 with no money (and someone owns a cafe) returns a failed EarnIncomeResult" do
+  end
 
-    @tag :skip
-    test "handle partial cafe payment" do
-    end
+  @tag :skip
+  test "handle partial cafe payment" do
+  end
 
-    @tag :skip
-    test "can buy a building" do
-    end
+  @tag :skip
+  test "can buy a building" do
   end
 
   def always_roll(number) do
