@@ -27,6 +27,10 @@ defmodule DiceTown.Game.Player do
     Enum.random(1..6)
   end
 
+  def pay(player, amount) do
+    GenServer.call(player, {:pay, amount})
+  end
+
   def earn_income(player, building, roll, is_current_player) do
     GenServer.call(player, {:earn_income, building, roll, is_current_player})
     #{:from_bank}
@@ -66,6 +70,11 @@ defmodule DiceTown.Game.Player do
     {:reply, result, player_state}
   end
 
+  def handle_call({:pay, amount}, _from, player_state) do
+    new_amount = player_state.coins + amount
+    {:reply, new_amount, %PlayerState{player_state| coins: new_amount}}
+  end
+
   def handle_call({:build, building}, _from, player_state) do
     coins = player_state.coins
     case @building_costs[building] do
@@ -100,7 +109,7 @@ defmodule DiceTown.Game.Player do
     end
   end
 
-  defp building_activation(buildings, :bakery, die_roll, true) when 2 >= die_roll >= 3 do
+  defp building_activation(buildings, :bakery, die_roll, true) when die_roll == 2 or die_roll == 3 do
     case buildings[:bakery] do
       0 ->
         nil
