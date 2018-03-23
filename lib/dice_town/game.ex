@@ -19,6 +19,10 @@ defmodule DiceTown.Game do
     GenServer.call(pid, {:roll_dice, player_id})
   end
 
+  def build(pid, player_id, building) do
+    GenServer.call(pid, {:build, player_id, building})
+  end
+
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts)
   end
@@ -71,6 +75,18 @@ defmodule DiceTown.Game do
     |> earn_income
     |> advance_game(:construction, game_state.turn_player_id)
     # todo: notify all players
+
+    {:reply, {serialize_game_state(new_game_state), actions}, new_game_state}
+  end
+
+  def handle_call({:build, player_id, building}, _from, game_state) do
+    np = next_player(
+      game_state.turn_player_id,
+      game_state.player_order
+    )
+    {new_game_state, actions} = {game_state, []}
+    |> build(building)
+    |> advance_game(:roll_dice, np)
 
     {:reply, {serialize_game_state(new_game_state), actions}, new_game_state}
   end
@@ -137,6 +153,12 @@ defmodule DiceTown.Game do
     end
   end
 
+  # building
+
+  defp build({game_state, actions}, nil) do
+    {game_state, [{:construction, %{player_id: 0, building: nil}}]}
+  end
+
   # utility methods
 
   defp advance_game({game_state, actions}, phase, turn_player_id) do
@@ -163,24 +185,16 @@ defmodule DiceTown.Game do
     }
   end
 
-  def next_player(_game_state) do
-#    current_player_id = game_state.turn.player_id
-#    player_ids = game_state.players
-#    |> Enum.map( fn(%Player{id: id}) -> id end)
-#
-#    cond do
-#      current_player_id == List.last(player_ids) ->
-#        # loop to the first player
-#        List.first(player_ids)
-#      true ->
-#        # go to the next player
-#        _next_player(player_ids, current_player_id)
-#    end
+  defp next_player(current_player_id, player_order) do
+    if current_player_id == List.last(player_order) do
+      List.first(player_order)
+    else
+      _next_player(current_player_id, player_order)
+    end
   end
-
   # recursion is fun?
-  defp _next_player([player_id | [next | _] ], player_id), do: next
-  defp _next_player([_ | rest], player_id) do
-    _next_player(rest, player_id)
+  defp _next_player(player_id, [player_id | [next | _] ]), do: next
+  defp _next_player(player_id, [_ | rest] ) do
+    _next_player(player_id, rest)
   end
 end

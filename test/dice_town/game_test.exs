@@ -214,9 +214,74 @@ defmodule DiceTown.GameTest do
     end
   end
 
+  describe "construction" do
+    test "can build nothing" do
+      # do setup
+      game_state = %{
+        players: %{
+          0 => %{
+            buildings: %{},
+            coins: 1
+          },
+          1 => %{
+            buildings: %{},
+            coins: 0
+          },
+        },
+        phase: :construction,
+        turn_player_id: 0,
+        player_order: [0,1]
+      }
+      game = start_supervised!({Game, %{game_state: game_state}})
 
-  @tag :skip
-  test "can buy a building" do
+      {new_game_state, actions} = Game.build(game, 0, nil)
+
+      # check game state
+      assert 1 == new_game_state[:players][0].coins
+      assert 0 == new_game_state[:players][1].coins
+      assert %{} == new_game_state[:players][0].buildings
+      assert 1 == new_game_state[:turn_player_id]
+      assert [0,1] == new_game_state[:player_order]
+      assert actions == [
+        {:construction, %{player_id: 0, building: nil}}
+      ]
+    end
+
+    @tag :skip
+    test "can buy a building" do
+      # do setup
+      game_state = %{
+        players: %{
+          0 => %{
+            buildings: %{},
+            coins: 1
+          },
+          1 => %{
+            buildings: %{},
+            coins: 0
+          },
+        },
+        phase: :construction,
+        turn_player_id: 0,
+        player_order: [0,1]
+      }
+      game = start_supervised!({Game, %{game_state: game_state}})
+
+      {new_game_state, actions} = Game.build(game, 0, :wheat_field)
+
+      # check game state
+      assert 0 == new_game_state[:players][0].coins
+      assert 0 == new_game_state[:players][1].coins
+      assert :roll_dice == new_game_state[:phase]
+      assert 1 == new_game_state[:turn_player_id]
+      assert [0,1] == new_game_state[:player_order]
+      # check actions
+      assert actions == [
+        {:construction, %{player_id: 0, building: :wheat_field}}
+      ]
+    end
+
+    test "can't buy a building if none available"
   end
 
   def always_roll(number) do
