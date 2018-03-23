@@ -1,300 +1,318 @@
 defmodule DiceTown.GameTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias DiceTown.Game
 
-  @initial_state_two_player %Game.GameState{
-    players: [
-      %Game.Player{
-        id: 0,
-        name: "Player 1"
-      },
-      %Game.Player{
-        id: 1,
-        name: "Player 2"
-      }
-    ],
-    buildings_built: %{
-      0 => %{
-        wheat_field: 1,
-        bakery: 1
-      },
-      1 => %{
-        wheat_field: 1,
-        bakery: 1
-      }
-    },
-    coins: %{
-      0 => 3,
-      1 => 3
-    },
-    buildings_available: %{
-      wheat_field: 8,
-      bakery: 8,
-      cafe: 8
-    },
-    turn: %Game.GameTurn{
-      player_id: 0,
-      phase: :roll_dice
-    }
-  }
-
-  @cafe_bankrupt_game_state %Game.GameState{
-    players: [
-      %Game.Player{
-        id: 0,
-        name: "Player 1"
-      },
-      %Game.Player{
-        id: 1,
-        name: "Player 2"
-      }
-    ],
-    buildings_built: %{
-      0 => %{
-        bakery: 1
-      },
-      1 => %{
-        cafe: 1
-      }
-    },
-    coins: %{
-      0 => 0,
-      1 => 0
-    },
-    buildings_available: %{
-      wheat_field: 8,
-      bakery: 7,
-      cafe: 7
-    },
-    turn: %Game.GameTurn{
-      player_id: 0,
-      phase: :earn_income
-    }
-  }
-
+  @initial_two_player %{player_order: [0,1]}
 
   describe "with two players" do
-    test "game sets up correctly " do
-      game_state = Game.init_game_state(["Player 1", "Player 2"])
-
-      assert game_state == @initial_state_two_player
+    setup do
+      game = start_supervised!({Game, @initial_two_player})
+      %{game: game}
     end
 
-    test "initial roll works" do
-      game_state = @initial_state_two_player
+    test "game sets up correctly", %{game: game} do
+      game_state = Game.get_state(game)
 
-      {:die_roll, result, new_game_state} = Game.roll_dice(game_state, 0)
-      %{player_id: player_id, die_roll: die_roll} = result
-
-      assert 0 == player_id
-      assert 1 >= die_roll >= 6
-      assert 0 == new_game_state.turn.player_id
-      assert :earn_income == new_game_state.turn.phase
-    end
-
-    test "rolling a 1 pays everyone (wheat)" do
-      game_state = %Game.GameState{@initial_state_two_player | turn: %Game.GameTurn{
-        player_id: 0,
-        phase: :earn_income
-      }}
-
-      {:earned_income, earn_income_results, new_game_state} = Game.earn_income(game_state, 0, 1)
-
-      # check earn_income_results
-      assert 2 == length(earn_income_results)
-      assert List.first(earn_income_results) == %Game.EarnIncomeResult{
-        building_activation: %Game.BuildingActivation{
-          building: :wheat_field,
-          count: 1,
-          to_player_id: 0,
-          from_player_id: nil,
-          total_amount: 1
-        },
-        success: true
-      }
-      assert List.last(earn_income_results) == %Game.EarnIncomeResult{
-        building_activation: %Game.BuildingActivation{
-          building: :wheat_field,
-          count: 1,
-          to_player_id: 1,
-          from_player_id: nil,
-          total_amount: 1
-        },
-        success: true
-      }
-      # check moneys
-      assert 4 == new_game_state.coins[0]
-      assert 4 == new_game_state.coins[1]
-      # check turn state
-      assert 0 == new_game_state.turn.player_id
-      assert :construction == new_game_state.turn.phase
-    end
-
-    test "rolling a 2 pays roller (bakery)" do
-      game_state = %Game.GameState{@initial_state_two_player | turn: %Game.GameTurn{
-        player_id: 0,
-        phase: :earn_income
-      }}
-
-      {:earned_income, earn_income_results, new_game_state} = Game.earn_income(game_state, 0, 2)
-
-      # check earn_income_results
-      assert 1 == length(earn_income_results)
-      assert List.first(earn_income_results) == %Game.EarnIncomeResult{
-        building_activation: %Game.BuildingActivation{
-          building: :bakery,
-          count: 1,
-          to_player_id: 0,
-          from_player_id: nil,
-          total_amount: 1
-        },
-        success: true
-      }
-      # check moneys
-      assert 4 == new_game_state.coins[0]
-      assert 3 == new_game_state.coins[1]
-      # check turn state
-      assert 0 == new_game_state.turn.player_id
-      assert :construction == new_game_state.turn.phase
-    end
-
-    test "rolling a 4 pays no one" do
-      game_state = %Game.GameState{@initial_state_two_player | turn: %Game.GameTurn{
-        player_id: 0,
-        phase: :earn_income
-      }}
-
-      {:earned_income, [], new_game_state} = Game.earn_income(game_state, 0, 4)
-
-      # check moneys
-      assert 3 == new_game_state.coins[0]
-      assert 3 == new_game_state.coins[1]
-      # check turn state
-      assert 0 == new_game_state.turn.player_id
-      assert :construction == new_game_state.turn.phase
-    end
-
-    test "rolling a 3 with no money (and someone owns a cafe) returns a failed EarnIncomeResult" do
-      game_state = %Game.GameState{@cafe_bankrupt_game_state | turn: %Game.GameTurn{
-        player_id: 0,
-        phase: :earn_income
-      }}
-
-      {:earned_income, earn_income_results, new_game_state} = Game.earn_income(game_state, 0, 3)
-
-      # check earn_income_results
-      assert 2 == length(earn_income_results)
-      assert List.first(earn_income_results) == %Game.EarnIncomeResult{
-        building_activation: %Game.BuildingActivation{
-          building: :cafe,
-          count: 1,
-          to_player_id: 1,
-          from_player_id: 0,
-          total_amount: 1
-        },
-        success: false
-      }
-      assert List.last(earn_income_results) == %Game.EarnIncomeResult{
-        building_activation: %Game.BuildingActivation{
-          building: :bakery,
-          count: 1,
-          to_player_id: 0,
-          from_player_id: nil,
-          total_amount: 1
-        },
-        success: true
-      }
-      # check moneys
-      assert 1 == new_game_state.coins[0]
-      assert 0 == new_game_state.coins[1]
-      # check turn state
-      assert 0 == new_game_state.turn.player_id
-      assert :construction == new_game_state.turn.phase
-    end
-
-    test "handle partial cafe payment" do
-      game_state = %Game.GameState{@cafe_bankrupt_game_state | turn: %Game.GameTurn{
-        player_id: 0,
-        phase: :earn_income
-      },
-        buildings_built: %{
-          0 => %{
-            bakery: 1
-          },
-          1 => %{
-            cafe: 2
-          }
-        },
-        coins: %{
-          0 => 1,
-          1 => 0
-        }
-      }
-
-      {:earned_income, earn_income_results, new_game_state} = Game.earn_income(game_state, 0, 3)
-
-      # check earn_income_results
-      assert 2 == length(earn_income_results)
-      assert List.first(earn_income_results) == %Game.EarnIncomeResult{
-        building_activation: %Game.BuildingActivation{
-          building: :cafe,
-          count: 2,
-          to_player_id: 1,
-          from_player_id: 0,
-          total_amount: 2
-        },
-        success: false
-      }
-      assert List.last(earn_income_results) == %Game.EarnIncomeResult{
-        building_activation: %Game.BuildingActivation{
-          building: :bakery,
-          count: 1,
-          to_player_id: 0,
-          from_player_id: nil,
-          total_amount: 1
-        },
-        success: true
-      }
-      # check moneys
-      assert 1 == new_game_state.coins[0]
-      assert 1 == new_game_state.coins[1]
-      # check turn state
-      assert 0 == new_game_state.turn.player_id
-      assert :construction == new_game_state.turn.phase
-    end
-
-    test "can buy a building" do
-      game_state = %Game.GameState{@initial_state_two_player | turn: %Game.GameTurn{
-        player_id: 0,
-        phase: :construction
-      }}
-
-      {:built, :wheat_field, new_game_state} = Game.build(game_state, 0, :wheat_field)
-
-      # check moneys
-      assert 2 == new_game_state.coins[0]
-      assert 3 == new_game_state.coins[1]
-      # check turn state
-      assert 1 == new_game_state.turn.player_id
-      assert :roll_dice == new_game_state.turn.phase
+      assert 3 == game_state[:players][0].coins
+      assert 3 == game_state[:players][1].coins
+      assert 1 == game_state[:players][0].buildings[:wheat_field]
+      assert 1 == game_state[:players][1].buildings[:wheat_field]
+      assert 1 == game_state[:players][0].buildings[:bakery]
+      assert 1 == game_state[:players][1].buildings[:bakery]
+      assert :roll_dice == game_state[:phase]
+      assert 0 == game_state[:turn_player_id]
+      assert [0,1] == game_state[:player_order]
     end
   end
 
-  describe "utility methods" do
-    test "next_player incremental" do
-      game_state = @initial_state_two_player
+  describe "setting up state" do
+    test "can set up two users with arbitrary buildings and coins" do
+      game_state = %{
+        players: %{
+          0 => %{
+            buildings: %{
+              wheat_field: 0,
+              bakery: 0
+            },
+            coins: 10
+          },
+          1 => %{
+            buildings: %{
+              wheat_field: 3,
+              bakery: 3
+            },
+            coins: 5
+          },
+        },
+        phase: :roll_dice,
+        turn_player_id: 0,
+        player_order: [0,1]
+      }
+      game = start_supervised!({Game, %{game_state: game_state}})
 
-      assert 1 == Game.next_player(game_state)
+      read_game_state = Game.get_state(game)
+
+      assert game_state == read_game_state
+    end
+  end
+
+  describe "rolling a 1" do
+    setup do
+      opts = @initial_two_player
+      |> Map.merge(%{die_fn: always_roll(1)})
+      game = start_supervised!({Game, opts})
+      %{game: game}
     end
 
-    test "next_player full revolution" do
-      game_state = %Game.GameState{@initial_state_two_player | turn: %Game.GameTurn{
-        player_id: 1,
-        phase: :construction
-      }}
+    test "pays everyone", %{game: game} do
+      {game_state, _actions} = Game.roll_dice(game, 0)
 
-      assert 0 == Game.next_player(game_state)
+      # check game state
+      assert 4 == game_state[:players][0].coins
+      assert 4 == game_state[:players][1].coins
+      assert :construction == game_state[:phase]
+      assert 0 == game_state[:turn_player_id]
+      assert [0,1] == game_state[:player_order]
     end
+
+    test "notifies with the correct actions", %{game: game} do
+      {_game_state, actions} = Game.roll_dice(game, 0)
+
+      # check actions
+      assert actions == [
+        {:die_roll, 1},
+        {:earn_income, %{player_id: 1, from: :bank, building: :wheat_field, amount: 1}},
+        {:earn_income, %{player_id: 0, from: :bank, building: :wheat_field, amount: 1}}
+      ]
+    end
+
+    @tag :skip
+    test "notifies everyone" do
+    end
+
+    @tag :skip
+    test "only current player can roll the dice" do
+    end
+  end
+
+  @tag :skip
+  test "rolling a 2 pays roller (bakery)" do
+  end
+
+  @tag :skip
+  test "rolling a 4 pays no one" do
+  end
+
+  describe "cafe" do
+    test "rolling a 3 with money pays a cafe owner" do
+      # do setup
+      game_state = %{
+        players: %{
+          0 => %{
+            buildings: %{},
+            coins: 1
+          },
+          1 => %{
+            buildings: %{
+              cafe: 1
+            },
+            coins: 0
+          },
+        },
+        phase: :roll_dice,
+        turn_player_id: 0,
+        player_order: [0,1]
+      }
+      game = start_supervised!({Game, %{game_state: game_state, die_fn: always_roll(3)}})
+
+      {new_game_state, actions} = Game.roll_dice(game, 0)
+
+      # check game state
+      assert 0 == new_game_state[:players][0].coins
+      assert 1 == new_game_state[:players][1].coins
+      assert :construction == new_game_state[:phase]
+      assert 0 == new_game_state[:turn_player_id]
+      assert [0,1] == new_game_state[:player_order]
+      # check actions
+      assert actions == [
+        {:die_roll, 3},
+        {:earn_income, %{player_id: 1, from: {:player, 0}, building: :cafe, amount: 1}}
+      ]
+    end
+
+    test "rolling a 3 with no money (and someone owns a cafe) returns a failed EarnIncomeResult" do
+      # do setup
+      game_state = %{
+        players: %{
+          0 => %{
+            buildings: %{},
+            coins: 0
+          },
+          1 => %{
+            buildings: %{
+              cafe: 1
+            },
+            coins: 0
+          },
+        },
+        phase: :roll_dice,
+        turn_player_id: 0,
+        player_order: [0,1]
+      }
+      game = start_supervised!({Game, %{game_state: game_state, die_fn: always_roll(3)}})
+
+      {new_game_state, actions} = Game.roll_dice(game, 0)
+
+      # check game state
+      assert 0 == new_game_state[:players][0].coins
+      assert 0 == new_game_state[:players][1].coins
+      assert :construction == new_game_state[:phase]
+      assert 0 == new_game_state[:turn_player_id]
+      assert [0,1] == new_game_state[:player_order]
+      # check actions
+      assert actions == [
+        {:die_roll, 3},
+        {:earn_income_miss, %{player_id: 1, from: {:player, 0}, building: :cafe, amount: 0}}
+      ]
+    end
+
+    test "handle partial cafe payment" do
+      # do setup
+      game_state = %{
+        players: %{
+          0 => %{
+            buildings: %{},
+            coins: 1
+          },
+          1 => %{
+            buildings: %{
+              cafe: 2
+            },
+            coins: 0
+          },
+        },
+        phase: :roll_dice,
+        turn_player_id: 0,
+        player_order: [0,1]
+      }
+      game = start_supervised!({Game, %{game_state: game_state, die_fn: always_roll(3)}})
+
+      {new_game_state, actions} = Game.roll_dice(game, 0)
+
+      # check game state
+      assert 0 == new_game_state[:players][0].coins
+      assert 1 == new_game_state[:players][1].coins
+      assert :construction == new_game_state[:phase]
+      assert 0 == new_game_state[:turn_player_id]
+      assert [0,1] == new_game_state[:player_order]
+      # check actions
+      assert actions == [
+        {:die_roll, 3},
+        {:earn_income_partial, %{player_id: 1, from: {:player, 0}, building: :cafe, amount: 1}}
+      ]
+    end
+  end
+
+  describe "construction" do
+    test "can build nothing" do
+      # do setup
+      game_state = %{
+        players: %{
+          0 => %{
+            buildings: %{},
+            coins: 1
+          },
+          1 => %{
+            buildings: %{},
+            coins: 0
+          },
+        },
+        phase: :construction,
+        turn_player_id: 0,
+        player_order: [0,1]
+      }
+      game = start_supervised!({Game, %{game_state: game_state}})
+
+      {new_game_state, actions} = Game.build(game, 0, nil)
+
+      # check game state
+      assert 1 == new_game_state[:players][0].coins
+      assert 0 == new_game_state[:players][1].coins
+      assert %{} == new_game_state[:players][0].buildings
+      assert 1 == new_game_state[:turn_player_id]
+      assert [0,1] == new_game_state[:player_order]
+      assert actions == [
+        {:construction, %{player_id: 0, building: nil}}
+      ]
+    end
+
+    test "can buy a building" do
+      # do setup
+      game_state = %{
+        players: %{
+          0 => %{
+            buildings: %{},
+            coins: 1
+          },
+          1 => %{
+            buildings: %{},
+            coins: 0
+          },
+        },
+        phase: :construction,
+        turn_player_id: 0,
+        player_order: [0,1]
+      }
+      game = start_supervised!({Game, %{game_state: game_state}})
+
+      {new_game_state, actions} = Game.build(game, 0, :wheat_field)
+
+      # check game state
+      assert 0 == new_game_state[:players][0].coins
+      assert 0 == new_game_state[:players][1].coins
+      assert :roll_dice == new_game_state[:phase]
+      assert 1 == new_game_state[:turn_player_id]
+      assert [0,1] == new_game_state[:player_order]
+      # check actions
+      assert actions == [
+        {:construction, %{player_id: 0, building: :wheat_field}}
+      ]
+    end
+
+    test "errors if not enough to buy requested building" do
+      # do setup
+      game_state = %{
+        players: %{
+          0 => %{
+            buildings: %{},
+            coins: 1
+          },
+          1 => %{
+            buildings: %{},
+            coins: 0
+          },
+        },
+        phase: :construction,
+        turn_player_id: 0,
+        player_order: [0,1]
+      }
+      game = start_supervised!({Game, %{game_state: game_state}})
+
+      {:error, :insufficient_coins} = Game.build(game, 0, :cafe)
+      read_game_state = Game.get_state(game)
+
+      # check game state
+      assert 1 == read_game_state[:players][0][:coins]
+      assert 0 == read_game_state[:players][1][:coins]
+      assert %{} == read_game_state[:players][0][:buildings]
+      assert :construction == read_game_state[:phase]
+      assert 0 == read_game_state[:turn_player_id]
+      assert [0,1] == read_game_state[:player_order]
+    end
+  end
+
+  def always_roll(number) do
+    fn() -> number end
   end
 end

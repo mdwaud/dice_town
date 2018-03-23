@@ -1,128 +1,213 @@
 defmodule DiceTown.Game do
-  alias DiceTown.Game.EarnIncome
-  alias DiceTown.Game.Construction
+  use GenServer
 
-  # state struct
-
-  defmodule Player do
-    defstruct id: nil, name: nil
-  end
-
-  defmodule GameTurn do
-    defstruct player_id: nil, phase: nil
-  end
+  alias DiceTown.Game.Player
 
   defmodule GameState do
-    defstruct players: [], buildings_built: %{}, buildings_available: %{}, coins: %{}, turn: nil
+    defstruct players: [], die_fn: nil, phase: nil, turn_player_id: nil, player_order: [], last_roll: nil
   end
 
-  defmodule BuildingActivation do
-    defstruct building: nil, count: nil, to_player_id: nil, from_player_id: nil, total_amount: nil
+  @building_activation_order [:cafe, :bakery, :wheat_field]
+
+  # client
+
+  def get_state(pid) do
+    GenServer.call(pid, :get_state)
   end
 
-  defmodule EarnIncomeResult do
-    defstruct building_activation: nil, success: nil
+  def roll_dice(pid, player_id) do
+    GenServer.call(pid, {:roll_dice, player_id})
   end
 
-  # game logic
+  def build(pid, player_id, building) do
+    GenServer.call(pid, {:build, player_id, building})
+  end
 
-  def init_game_state(player_names) do
-    players = player_names
-    |> Enum.with_index
-    |> Enum.map( fn({name, index}) -> %Player{id: index, name: name} end )
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, opts)
+  end
 
-    player_ids = players
-    |> Enum.map( fn(%Player{id: id}) -> id end)
+  # server
 
-    buildings_built = player_ids
-    |> Enum.map( fn(id) -> {id, %{wheat_field: 1, bakery: 1}} end)
+  # new game
+  def init(opts = %{player_order: player_order}) do
+    die_fn = opts[:die_fn] || fn() -> Player.roll_dice() end
+
+    players = player_order
+    |> Enum.map(fn(player_id) -> {player_id, init_player(%{})} end)
     |> Map.new
 
-    coins = player_ids
-    |> Enum.map( fn(id) -> {id, 3} end)
-    |> Map.new
-
-    %GameState{
+    game_state = %GameState{
       players: players,
-      buildings_built: buildings_built,
-      coins: coins,
-      buildings_available: %{
-        wheat_field: 8,
-        bakery: 8,
-        cafe: 8
-      },
-      turn: %GameTurn{
-        player_id: List.first(player_ids),
-        phase: :roll_dice
-      }
+      die_fn: die_fn,
+      phase: :roll_dice,
+      turn_player_id: List.first(player_order),
+      player_order: player_order
     }
+    {:ok, game_state}
   end
 
-  # only care about one die for now
-  def roll_dice(game_state, player_id) do
-    die_roll = Enum.random(1..6)
+  # from a save
+  def init(opts = %{game_state: game_state_map}) do
+    die_fn = opts[:die_fn] || fn() -> Player.roll_dice() end
 
-    new_game_state = game_state
-    |> update_turn(game_state.turn.player_id, :earn_income)
+    players = game_state_map[:player_order]
+    |> Enum.map(fn(player_id) -> {player_id, init_player(game_state_map[:players][player_id])} end)
+    |> Map.new
 
-    {:die_roll, %{player_id: player_id, die_roll: die_roll}, new_game_state}
+    game_state = %GameState{
+      players: players,
+      die_fn: die_fn,
+      phase: game_state_map[:phase],
+      turn_player_id: game_state_map[:turn_player_id],
+      player_order: game_state_map[:player_order]
+    }
+    {:ok, game_state}
   end
 
-  def earn_income(game_state, player_id, die_roll) do
-    building_activations = EarnIncome.calc_building_activiations(game_state.buildings_built, player_id, die_roll)
-    {temp_game_state, earn_income_results} = game_state
-    |> EarnIncome.apply_building_activations(building_activations)
-
-    new_game_state = temp_game_state
-    |> update_turn(game_state.turn.player_id, :construction)
-
-    {:earned_income, earn_income_results, new_game_state}
+  def handle_call(:get_state, _from, game_state) do
+    {:reply, serialize_game_state(game_state), game_state}
   end
 
-  def build(game_state, player_id, building) do
-    case Construction.build(game_state, player_id, building) do
-      {:ok, built_game_state} ->
-        # eventually check for victory conditions here
-        new_game_state = built_game_state
-        |> update_turn(next_player(built_game_state), :roll_dice)
+  def handle_call({:roll_dice, _player_id}, _from, game_state) do
+    {new_game_state, actions} = {game_state, []}
+    |> roll_dice
+    |> earn_income
+    |> advance_game(:construction, game_state.turn_player_id)
+    # todo: notify all players
 
-        {:built, building, new_game_state}
-      {:error, reason} ->
-        {:error, reason}
+    {:reply, {serialize_game_state(new_game_state), actions}, new_game_state}
+  end
+
+  def handle_call({:build, player_id, building}, _from, game_state) do
+    case build({game_state, []}, building) do
+      {:error, msg} ->
+        {:reply, {:error, msg}, game_state}
+      {built_game_state, built_actions} ->
+        np = next_player(
+          game_state.turn_player_id,
+          game_state.player_order
+        )
+        {new_game_state, actions} = {built_game_state, built_actions}
+        |> advance_game(:roll_dice, np)
+        {:reply, {serialize_game_state(new_game_state), actions}, new_game_state}
     end
+  end
 
-    # building available
-    # player has enough money
+  defp init_player(player_data) do
+    {:ok, pid} = Player.start_link(%{
+      buildings: player_data[:buildings],
+      coins: player_data[:coins],
+    })
 
+    pid
+  end
+
+  # rolling_dice
+
+  defp roll_dice({game_state, _actions}) do
+    die_roll = game_state.die_fn.()
+    {%GameState{game_state| last_roll: die_roll}, [{:die_roll, die_roll}]}
+  end
+
+  # earning income
+
+  defp earn_income({game_state, actions}) do
+    player_building_activation_order(game_state.player_order)
+    |> handle_activations(game_state, actions)
+  end
+
+  # build up a list of {player_id, building}
+  # ex: [{1, :cafe}, {0, :cafe}, {1, :bakery}, {0, :bakery}, {1, :wheat_field}, {0, wheat_field}]
+  defp player_building_activation_order(player_order) do
+    reverse_player_order = Enum.reverse(player_order)
+    @building_activation_order
+    |> Enum.flat_map(fn(building) ->
+      Enum.map(reverse_player_order, fn(player_id) -> {player_id, building} end)
+    end)
+  end
+
+  # run through the list of {player, building} and process each result of Player.earn_income
+  defp handle_activations([], game_state, actions), do: {game_state, actions}
+  defp handle_activations([{player_id, building}| tail], game_state, actions) do
+    player = game_state.players[player_id]
+    is_current_player = player_id == game_state.turn_player_id
+
+    case Player.earn_income(player, building, game_state.last_roll, is_current_player) do
+      nil ->
+        handle_activations(tail, game_state, actions)
+      {:from_bank, amount} ->
+        Player.pay(player, amount)
+        new_actions = actions ++ [{:earn_income, %{player_id: player_id, from: :bank, building: building, amount: amount}}]
+        handle_activations(tail, game_state, new_actions)
+      {:from_current_player, amount} ->
+        current_player = game_state.players[game_state.turn_player_id]
+        new_action = case Player.pay_player(current_player, player, amount) do
+          :ok ->
+            {:earn_income, %{player_id: player_id, from: {:player, game_state.turn_player_id}, building: building, amount: amount}}
+          :insufficient_coins ->
+            {:earn_income_miss, %{player_id: player_id, from: {:player, game_state.turn_player_id}, building: building, amount: 0}}
+          {:partial_payment, amount} ->
+            {:earn_income_partial, %{player_id: player_id, from: {:player, game_state.turn_player_id}, building: building, amount: amount}}
+        end
+
+        new_actions = actions ++ [new_action]
+        handle_activations(tail, game_state, new_actions)
+    end
+  end
+
+  # building
+
+  defp build({game_state, actions}, nil) do
+    {game_state, [{:construction, %{player_id: game_state.turn_player_id, building: nil}}]}
+  end
+
+  defp build({game_state, actions}, building) do
+    case Player.build(game_state.players[game_state.turn_player_id], building) do
+      :ok ->
+        new_action = {:construction, %{player_id: game_state.turn_player_id, building: building}}
+        {game_state, actions ++ [new_action]}
+      :insufficient_coins ->
+        {:error, :insufficient_coins}
+    end
   end
 
   # utility methods
 
-  def update_turn(game_state, player_id, phase) do
-    %GameState{game_state | turn: %GameTurn{
-      player_id: player_id,
-      phase: phase
-    }}
+  defp advance_game({game_state, actions}, phase, turn_player_id) do
+    new_game_state = %{ game_state | phase: phase, turn_player_id: turn_player_id}
+    {new_game_state, actions}
   end
 
-  def next_player(game_state) do
-    current_player_id = game_state.turn.player_id
-    player_ids = game_state.players
-    |> Enum.map( fn(%Player{id: id}) -> id end)
+  defp serialize_game_state(game_state) do
+    players_map = game_state.players
+    |> Enum.map(fn({id, player}) -> {id, serialize_player(Player.get_state(player))} end)
+    |> Map.new
+    %{
+      players: players_map,
+      phase: game_state.phase,
+      turn_player_id: game_state.turn_player_id,
+      player_order: game_state.player_order
+    }
+  end
 
-    cond do
-      current_player_id == List.last(player_ids) ->
-        # loop to the first player
-        List.first(player_ids)
-      true ->
-        # go to the next player
-        _next_player(player_ids, current_player_id)
+  defp serialize_player(player_state) do
+    %{
+      buildings: player_state.buildings,
+      coins: player_state.coins
+    }
+  end
+
+  defp next_player(current_player_id, player_order) do
+    if current_player_id == List.last(player_order) do
+      List.first(player_order)
+    else
+      _next_player(current_player_id, player_order)
     end
   end
-
   # recursion is fun?
-  defp _next_player([player_id | [next | _] ], player_id), do: next
-  defp _next_player([_ | rest], player_id) do
-    _next_player(rest, player_id)
+  defp _next_player(player_id, [player_id | [next | _] ]), do: next
+  defp _next_player(player_id, [_ | rest] ) do
+    _next_player(player_id, rest)
   end
 end
