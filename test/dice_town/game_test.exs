@@ -3,9 +3,11 @@ defmodule DiceTown.GameTest do
 
   alias DiceTown.Game
 
+  @initial_two_player %{player_order: [0,1]}
+
   describe "with two players" do
     setup do
-      game = start_supervised!({Game, %{player_names: ["Player 1", "Player 2"]}})
+      game = start_supervised!({Game, @initial_two_player})
       %{game: game}
     end
 
@@ -24,9 +26,41 @@ defmodule DiceTown.GameTest do
     end
   end
 
+  describe "setting up state" do
+    test "can set up two users with arbitrary buildings and coins" do
+      game_state = %{
+        players: %{
+          0 => %{
+            buildings: %{
+              wheat_field: 0,
+              bakery: 0
+            },
+            coins: 10
+          },
+          1 => %{
+            buildings: %{
+              wheat_field: 3,
+              bakery: 3
+            },
+            coins: 5
+          },
+        },
+        phase: :roll_dice,
+        turn_player_id: 0,
+        player_order: [0,1]
+      }
+      game = start_supervised!({Game, %{game_state: game_state}})
+
+      read_game_state = Game.get_state(game)
+
+      assert game_state == read_game_state
+    end
+  end
+
   describe "rolling a 1" do
     setup do
-      opts = %{player_names: ["Player 1", "Player 2"], die_fn: always_roll(1)}
+      opts = @initial_two_player
+      |> Map.merge(%{die_fn: always_roll(1)})
       game = start_supervised!({Game, opts})
       %{game: game}
     end

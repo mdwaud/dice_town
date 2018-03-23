@@ -25,22 +25,38 @@ defmodule DiceTown.Game do
 
   # server
 
-  def init(opts = %{player_names: player_names}) do
+  # new game
+  def init(opts = %{player_order: player_order}) do
     die_fn = opts[:die_fn] || fn() -> Player.roll_dice() end
 
-    players = player_names
-    |> Enum.with_index
-    |> Enum.map( fn({name, index}) -> [index, Player.start_link(%{})] end )
-    |> Enum.map( fn([index, {:ok, player}]) -> {index, player} end )
+    players = player_order
+    |> Enum.map(fn(player_id) -> {player_id, init_player(%{})} end)
     |> Map.new
 
-    player_order = Map.keys(players)
     game_state = %GameState{
       players: players,
       die_fn: die_fn,
       phase: :roll_dice,
       turn_player_id: List.first(player_order),
       player_order: player_order
+    }
+    {:ok, game_state}
+  end
+
+  # from a save
+  def init(opts = %{game_state: game_state_map}) do
+    die_fn = opts[:die_fn] || fn() -> Player.roll_dice() end
+
+    players = game_state_map[:player_order]
+    |> Enum.map(fn(player_id) -> {player_id, init_player(game_state_map[:players][player_id])} end)
+    |> Map.new
+
+    game_state = %GameState{
+      players: players,
+      die_fn: die_fn,
+      phase: game_state_map[:phase],
+      turn_player_id: game_state_map[:turn_player_id],
+      player_order: game_state_map[:player_order]
     }
     {:ok, game_state}
   end
@@ -57,6 +73,15 @@ defmodule DiceTown.Game do
     # todo: notify all players
 
     {:reply, {serialize_game_state(new_game_state), actions}, new_game_state}
+  end
+
+  defp init_player(player_data) do
+    {:ok, pid} = Player.start_link(%{
+      buildings: player_data[:buildings],
+      coins: player_data[:coins],
+    })
+
+    pid
   end
 
   # rolling_dice
@@ -107,13 +132,20 @@ defmodule DiceTown.Game do
 
   defp serialize_game_state(game_state) do
     players_map = game_state.players
-    |> Enum.map(fn({id, player}) -> {id, Player.get_state(player)} end)
+    |> Enum.map(fn({id, player}) -> {id, serialize_player(Player.get_state(player))} end)
     |> Map.new
     %{
       players: players_map,
       phase: game_state.phase,
       turn_player_id: game_state.turn_player_id,
       player_order: game_state.player_order
+    }
+  end
+
+  defp serialize_player(player_state) do
+    %{
+      buildings: player_state.buildings,
+      coins: player_state.coins
     }
   end
 
