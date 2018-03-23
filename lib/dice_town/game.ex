@@ -113,13 +113,20 @@ defmodule DiceTown.Game do
   defp handle_activations([{player_id, building}| tail], game_state, actions) do
     player = game_state.players[player_id]
     is_current_player = player_id == game_state.turn_player_id
+
     case Player.earn_income(player, building, game_state.last_roll, is_current_player) do
+      nil ->
+        handle_activations(tail, game_state, actions)
       {:from_bank, amount} ->
         Player.pay(player, amount)
         new_actions = actions ++ [{:earn_income, %{player_id: player_id, from: :bank, building: building, amount: amount}}]
         handle_activations(tail, game_state, new_actions)
-      nil ->
-        handle_activations(tail, game_state, actions)
+      {:from_current_player, amount} ->
+        Player.pay(game_state.players[game_state.turn_player_id], -amount)
+        # todo: handle can't pay scenarios
+        Player.pay(player, amount)
+        new_actions = actions ++ [{:earn_income, %{player_id: player_id, from: {:player, game_state.turn_player_id}, building: building, amount: amount}}]
+        handle_activations(tail, game_state, new_actions)
     end
   end
 

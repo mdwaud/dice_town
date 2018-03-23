@@ -101,7 +101,7 @@ defmodule DiceTown.Game.Player do
   # building specific logic
 
   defp building_activation(buildings, :wheat_field, 1, _is_current_player) do
-    case buildings[:wheat_field] do
+    case buildings[:wheat_field] || 0 do
       0 ->
         nil
       count ->
@@ -110,7 +110,7 @@ defmodule DiceTown.Game.Player do
   end
 
   defp building_activation(buildings, :bakery, die_roll, true) when die_roll == 2 or die_roll == 3 do
-    case buildings[:bakery] do
+    case buildings[:bakery] || 0 do
       0 ->
         nil
       count ->
@@ -119,7 +119,7 @@ defmodule DiceTown.Game.Player do
   end
 
   defp building_activation(buildings, :cafe, 3, false) do
-    case buildings[:cafe] do
+    case buildings[:cafe] || 0 do
       0 ->
         nil
       count ->

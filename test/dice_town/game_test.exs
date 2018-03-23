@@ -105,23 +105,38 @@ defmodule DiceTown.GameTest do
   end
 
   describe "cafe" do
-    @tag :skip
     test "rolling a 3 with money pays a cafe owner" do
       # do setup
-      opts = %{player_names: ["Player 1", "Player 2"], die_fn: always_roll(3)}
-      game = start_supervised!({Game, opts})
+      game_state = %{
+        players: %{
+          0 => %{
+            buildings: %{},
+            coins: 1
+          },
+          1 => %{
+            buildings: %{
+              cafe: 1
+            },
+            coins: 0
+          },
+        },
+        phase: :roll_dice,
+        turn_player_id: 0,
+        player_order: [0,1]
+      }
+      game = start_supervised!({Game, %{game_state: game_state, die_fn: always_roll(3)}})
 
-      {game_state, actions} = Game.roll_dice(game, 0)
+      {new_game_state, actions} = Game.roll_dice(game, 0)
 
       # check game state
-      assert 0 == game_state[:players][0].coins
-      assert 1 == game_state[:players][1].coins
-      assert :construction == game_state[:phase]
-      assert 0 == game_state[:turn_player_id]
-      assert [0,1] == game_state[:player_order]
+      assert 0 == new_game_state[:players][0].coins
+      assert 1 == new_game_state[:players][1].coins
+      assert :construction == new_game_state[:phase]
+      assert 0 == new_game_state[:turn_player_id]
+      assert [0,1] == new_game_state[:player_order]
       # check actions
       assert actions == [
-        {:die_roll, 1},
+        {:die_roll, 3},
         {:earn_income, %{player_id: 1, from: {:player, 0}, building: :cafe, amount: 1}}
       ]
     end
