@@ -31,6 +31,10 @@ defmodule DiceTown.Game.Player do
     GenServer.call(player, {:pay, amount})
   end
 
+  def pay_player(player, other_player, amount) do
+    GenServer.call(player, {:pay_player, other_player, amount})
+  end
+
   def earn_income(player, building, roll, is_current_player) do
     GenServer.call(player, {:earn_income, building, roll, is_current_player})
     #{:from_bank}
@@ -73,6 +77,21 @@ defmodule DiceTown.Game.Player do
   def handle_call({:pay, amount}, _from, player_state) do
     new_amount = player_state.coins + amount
     {:reply, new_amount, %PlayerState{player_state| coins: new_amount}}
+  end
+
+  def handle_call({:pay_player, other_player, amount}, _from, player_state) do
+    cond do
+      # no payment
+      player_state.coins == 0 ->
+        {:reply, :insufficient_coins, player_state}
+      # full payment
+      player_state.coins >= amount ->
+        DiceTown.Game.Player.pay(other_player, amount)
+        new_amount = player_state.coins - amount
+        {:reply, :ok, %PlayerState{player_state| coins: new_amount}}
+      # partial payment
+#      true ->
+    end
   end
 
   def handle_call({:build, building}, _from, player_state) do
@@ -127,7 +146,7 @@ defmodule DiceTown.Game.Player do
     end
   end
 
-  defp building_activation(buildings, _, _, _is_current_player) do
+  defp building_activation(_buildings, _, _, _is_current_player) do
     nil
   end
 end
