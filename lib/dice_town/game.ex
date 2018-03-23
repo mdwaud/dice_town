@@ -156,7 +156,16 @@ defmodule DiceTown.Game do
   # building
 
   defp build({game_state, actions}, nil) do
-    {game_state, [{:construction, %{player_id: 0, building: nil}}]}
+    {game_state, [{:construction, %{player_id: game_state.turn_player_id, building: nil}}]}
+  end
+
+  defp build({game_state, actions}, building) do
+    new_action = case Player.build(game_state.players[game_state.turn_player_id], building) do
+      :ok ->
+        {:construction, %{player_id: game_state.turn_player_id, building: building}}
+    end
+
+    {game_state, actions ++ [new_action]}
   end
 
   # utility methods

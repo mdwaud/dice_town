@@ -247,7 +247,6 @@ defmodule DiceTown.GameTest do
       ]
     end
 
-    @tag :skip
     test "can buy a building" do
       # do setup
       game_state = %{
@@ -280,8 +279,6 @@ defmodule DiceTown.GameTest do
         {:construction, %{player_id: 0, building: :wheat_field}}
       ]
     end
-
-    test "can't buy a building if none available"
   end
 
   def always_roll(number) do
