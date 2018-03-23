@@ -279,6 +279,37 @@ defmodule DiceTown.GameTest do
         {:construction, %{player_id: 0, building: :wheat_field}}
       ]
     end
+
+    test "errors if not enough to buy requested building" do
+      # do setup
+      game_state = %{
+        players: %{
+          0 => %{
+            buildings: %{},
+            coins: 1
+          },
+          1 => %{
+            buildings: %{},
+            coins: 0
+          },
+        },
+        phase: :construction,
+        turn_player_id: 0,
+        player_order: [0,1]
+      }
+      game = start_supervised!({Game, %{game_state: game_state}})
+
+      {:error, :insufficient_coins} = Game.build(game, 0, :cafe)
+      read_game_state = Game.get_state(game)
+
+      # check game state
+      assert 1 == read_game_state[:players][0][:coins]
+      assert 0 == read_game_state[:players][1][:coins]
+      assert %{} == read_game_state[:players][0][:buildings]
+      assert :construction == read_game_state[:phase]
+      assert 0 == read_game_state[:turn_player_id]
+      assert [0,1] == read_game_state[:player_order]
+    end
   end
 
   def always_roll(number) do

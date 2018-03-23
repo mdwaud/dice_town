@@ -80,15 +80,18 @@ defmodule DiceTown.Game do
   end
 
   def handle_call({:build, player_id, building}, _from, game_state) do
-    np = next_player(
-      game_state.turn_player_id,
-      game_state.player_order
-    )
-    {new_game_state, actions} = {game_state, []}
-    |> build(building)
-    |> advance_game(:roll_dice, np)
-
-    {:reply, {serialize_game_state(new_game_state), actions}, new_game_state}
+    case build({game_state, []}, building) do
+      {:error, msg} ->
+        {:reply, {:error, msg}, game_state}
+      {built_game_state, built_actions} ->
+        np = next_player(
+          game_state.turn_player_id,
+          game_state.player_order
+        )
+        {new_game_state, actions} = {built_game_state, built_actions}
+        |> advance_game(:roll_dice, np)
+        {:reply, {serialize_game_state(new_game_state), actions}, new_game_state}
+    end
   end
 
   defp init_player(player_data) do
@@ -160,12 +163,13 @@ defmodule DiceTown.Game do
   end
 
   defp build({game_state, actions}, building) do
-    new_action = case Player.build(game_state.players[game_state.turn_player_id], building) do
+    case Player.build(game_state.players[game_state.turn_player_id], building) do
       :ok ->
-        {:construction, %{player_id: game_state.turn_player_id, building: building}}
+        new_action = {:construction, %{player_id: game_state.turn_player_id, building: building}}
+        {game_state, actions ++ [new_action]}
+      :insufficient_coins ->
+        {:error, :insufficient_coins}
     end
-
-    {game_state, actions ++ [new_action]}
   end
 
   # utility methods
