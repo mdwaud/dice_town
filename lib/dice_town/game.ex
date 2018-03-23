@@ -128,9 +128,8 @@ defmodule DiceTown.Game do
             {:earn_income, %{player_id: player_id, from: {:player, game_state.turn_player_id}, building: building, amount: amount}}
           :insufficient_coins ->
             {:earn_income_miss, %{player_id: player_id, from: {:player, game_state.turn_player_id}, building: building, amount: 0}}
-            # {:partial_payment, amount} ->
-
-          # todo: handle can't pay scenarios
+          {:partial_payment, amount} ->
+            {:earn_income_partial, %{player_id: player_id, from: {:player, game_state.turn_player_id}, building: building, amount: amount}}
         end
 
         new_actions = actions ++ [new_action]

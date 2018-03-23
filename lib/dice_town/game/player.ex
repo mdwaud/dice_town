@@ -90,7 +90,9 @@ defmodule DiceTown.Game.Player do
         new_amount = player_state.coins - amount
         {:reply, :ok, %PlayerState{player_state| coins: new_amount}}
       # partial payment
-#      true ->
+      true ->
+        DiceTown.Game.Player.pay(other_player, player_state.coins)
+        {:reply, {:partial_payment, player_state.coins}, %PlayerState{player_state| coins: 0}}
     end
   end
 
