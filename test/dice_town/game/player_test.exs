@@ -5,23 +5,23 @@ defmodule DiceTown.PlayerTest do
 
   describe "init" do
     setup do
-      player = start_supervised!(Player)
+      player = Player.init
       %{player: player}
     end
 
     test "has correct # of coins", %{player: player} do
-      assert 3 == Player.get_state(player).coins
+      assert 3 == player.coins
     end
 
     test "has correct buildings", %{player: player} do
-      assert 1 == Player.get_state(player).buildings[:wheat_field]
-      assert 1 == Player.get_state(player).buildings[:bakery]
+      assert 1 == player.buildings[:wheat_field]
+      assert 1 == player.buildings[:bakery]
     end
   end
 
   describe "earning income on a wheat_field" do
     setup context do
-      player = start_supervised!({Player, %{buildings: context[:buildings]}})
+      player = %Player.PlayerState{buildings: context[:buildings], coins: 0}
       %{player: player}
     end
 
@@ -43,7 +43,7 @@ defmodule DiceTown.PlayerTest do
 
   describe "earning income on a bakery" do
     setup context do
-      player = start_supervised!({Player, %{buildings: context[:buildings]}})
+      player = %Player.PlayerState{buildings: context[:buildings], coins: 0}
       %{player: player}
     end
 
@@ -70,7 +70,7 @@ defmodule DiceTown.PlayerTest do
 
   describe "earning income on a cafe" do
     setup context do
-      player = start_supervised!({Player, %{buildings: context[:buildings]}})
+      player = %Player.PlayerState{buildings: context[:buildings], coins: 0}
       %{player: player}
     end
 
@@ -92,33 +92,30 @@ defmodule DiceTown.PlayerTest do
 
   describe "construction" do
     test "building a wheat_field with enough money" do
-      player = start_supervised!({Player, %{buildings: %{}, coins: 1}})
+      player = %Player.PlayerState{buildings: %{}, coins: 1}
 
-      :ok = Player.build(player, :wheat_field)
-      player_state = Player.get_state(player)
+      {:ok, new_player_state} = Player.build(player, :wheat_field)
 
-      assert 0 == player_state.coins
-      assert %{wheat_field: 1} == player_state.buildings
+      assert 0 == new_player_state.coins
+      assert %{wheat_field: 1} == new_player_state.buildings
     end
 
     test "building a wheat_field with insufficient money" do
-      player = start_supervised!({Player, %{buildings: %{}, coins: 0}})
+      player = %Player.PlayerState{buildings: %{}, coins: 0}
 
-      :insufficient_coins = Player.build(player, :wheat_field)
-      player_state = Player.get_state(player)
+      {:insufficient_coins, new_player_state} = Player.build(player, :wheat_field)
 
-      assert 0 == player_state.coins
-      assert %{} == player_state.buildings
+      assert 0 == new_player_state.coins
+      assert %{} == new_player_state.buildings
       #assert %{wheat_field: 0} == player_state.buildings
     end
 
     test "building a unrecognized building returns an error" do
-      player = start_supervised!(Player)
+      player = %Player.PlayerState{buildings: %{}, coins: 3}
 
-      :unrecognized_building = Player.build(player, :rocket_ship)
-      player_state = Player.get_state(player)
+      {:unrecognized_building, new_player_state} = Player.build(player, :rocket_ship)
 
-      assert 3 == player_state.coins
+      assert 3 == new_player_state.coins
     end
   end
 end

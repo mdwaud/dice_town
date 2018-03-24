@@ -1,6 +1,4 @@
 defmodule DiceTown.Game.Player do
-  use GenServer
-
   defmodule PlayerState do
     defstruct buildings: %{}, coins: %{}
   end
@@ -13,49 +11,64 @@ defmodule DiceTown.Game.Player do
     cafe: 2
   }
 
+  def init do
+    %PlayerState{
+      buildings: @initial_buildings,
+      coins: @initial_coins,
+    }
+  end
+
+  def init(opts) do
+    %PlayerState{
+      buildings: opts[:buildings] || @initial_buildings,
+      coins: opts[:coins] || @initial_coins
+    }
+  end
+
   # client
-
-  def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts)
-  end
-
-  def get_state(player) do
-    GenServer.call(player, :get_state)
-  end
 
   def roll_dice do
     Enum.random(1..6)
   end
 
-  def pay(player, amount) do
-    GenServer.call(player, {:pay, amount})
+  def pay(player_state, amount) do
+    new_amount = player_state.coins + amount
+    {:ok, %PlayerState{player_state| coins: new_amount}}
   end
 
   def pay_player(player, other_player, amount) do
     GenServer.call(player, {:pay_player, other_player, amount})
   end
 
-  def earn_income(player, building, roll, is_current_player) do
-    GenServer.call(player, {:earn_income, building, roll, is_current_player})
-    #{:from_bank}
-    #{:from_current_player}
-    #{:from_all_players}
-    #{:from_any_player}
+  #{:from_bank}
+  #{:from_current_player}
+  #{:from_all_players}
+  #{:from_any_player}
+  def earn_income(player_state, building, die_roll, is_current_player) do
+    building_activation(player_state.buildings, building, die_roll, is_current_player)
   end
 
-  def build(player, building) do
-    GenServer.call(player, {:build, building})
+  def build(player_state, building) do
+    coins = player_state.coins
+    case @building_costs[building] do
+      nil ->
+        {:unrecognized_building, player_state}
+      amount when amount <= coins ->
+        {:ok, do_build(player_state, building)}
+      _ ->
+        {:insufficient_coins, player_state}
+    end
   end
+
+  def serialize(player_state) do
+    %{
+      buildings: player_state.buildings,
+      coins: player_state.coins
+    }
+  end
+
 
   # server
-
-  def init(opts) do
-    player_state = %PlayerState{
-      buildings: opts[:buildings] || @initial_buildings,
-      coins: opts[:coins] || @initial_coins
-    }
-    {:ok, player_state}
-  end
 
 #  def init(opts = %{}) do
 #    player_state = %PlayerState{
